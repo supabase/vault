@@ -1,0 +1,6 @@
+# pgsodium extension
+comment = 'Supabase Vault Extension'
+default_version = '0.0.1'
+relocatable = false
+schema = vault
+requires = 'pgsodium'
