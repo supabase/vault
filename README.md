@@ -1,15 +1,4 @@
-# Supabase Vault (BETA)
-
----
-id: vault
-title: Encrypted Vault Storage
-description: Encrypting Secrets in the Vault table.
----
-
-import Tabs from '@theme/Tabs'
-import TabItem from '@theme/TabItem'
-
-## Introduction to the Vault (Beta)
+# Introduction to the Vault (Beta)
 
 Many applications have sensitive data that must have additional
 storage protection relative to other data.  For example, your
@@ -40,7 +29,7 @@ CREATE SCHEMA vault;
 CREATE EXTENSION supabase_vault WITH SCHEMA vault;
 ```
 
-The `supabase_vault` extension must go into a schema named Vault.
+The `supabase_vault` extension must go into a schema named `vault`.
 This is to avoid any name confusion when accessing the sensitive
 `vault.secrets` table.  In general it is always best to refer to it
 directly with the full qualified name `vault.secrets`.
@@ -51,7 +40,18 @@ Using the vault is as simple as `INSERT`ing data into the
 `vault.secret` table.
 
 ```
+# INSERT INTO vault.secrets (secret) VALUES ('s3kr3t_k3y') RETURNING *;
+-[ RECORD 1 ]--------------------------------------------------------
+id         | 05fabec2-872b-45e7-abfc-26957afe5b67
+secret     | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
+key_id     | 2fb07feb-30fa-42fa-9f5f-df87931629c5
+associated |
+nonce      | \x9dd8be2eeaa8cee1316cf9f4859daced
+created_at | 2022-08-16 21:27:16.555253+00
 ```
+
+Notice that the 'secret' column is now encrypted with the key id in
+the `key_id` column.
 
 You can also insert a text column called "associated".  This data will
 be mixed in with the cryptographic signature verification, meaning
@@ -59,17 +59,65 @@ that if it changes, the decryption will fail.  This pattern is called
 [Authenticated Encryption with Assocaited Data (AEAD)].
 
 ```
+# INSERT INTO vault.secrets (secret, associated) VALUES ('s3kr3t_k3y', 'This is the payment processor key') RETURNING *;
+-[ RECORD 1 ]--------------------------------------------------------
+id         | d02f9734-db02-48cd-9fcb-daab9dd34d10
+secret     | Czs1s9UxMWkvAsUOlGCdeho37oM8MeCam1kFkwrSBsh/pKydlaPlP/AR
+key_id     | 2fb07feb-30fa-42fa-9f5f-df87931629c5
+associated | This is the payment processor key
+nonce      | \x2fc36f6b6cb3d2dd4aac8d89c65b04d9
+created_at | 2022-08-16 21:28:38.980329+00
 ```
 
 ## Querying Data from the Vault
 
 If you look in the `vault.secrets` table, you will see that your data
-is stored encrypted.  To decrypt the data, there is an automatically
-created view `pgsodium_masks.secrets`.  This view will decrypt secret
-data on the fly:
+is stored encrypted:
 
 ```
+# select * from vault.secrets;
+-[ RECORD 1 ]--------------------------------------------------------
+id         | 05fabec2-872b-45e7-abfc-26957afe5b67
+secret     | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
+key_id     | 2fb07feb-30fa-42fa-9f5f-df87931629c5
+associated |
+nonce      | \x9dd8be2eeaa8cee1316cf9f4859daced
+created_at | 2022-08-16 21:27:16.555253+00
+-[ RECORD 2 ]--------------------------------------------------------
+id         | d02f9734-db02-48cd-9fcb-daab9dd34d10
+secret     | Czs1s9UxMWkvAsUOlGCdeho37oM8MeCam1kFkwrSBsh/pKydlaPlP/AR
+key_id     | 2fb07feb-30fa-42fa-9f5f-df87931629c5
+associated | This is the payment processor key
+nonce      | \x2fc36f6b6cb3d2dd4aac8d89c65b04d9
+created_at | 2022-08-16 21:28:38.980329+00
 ```
+
+To decrypt the data, there is an automatically created view
+`pgsodium_masks.secrets`.  This view will decrypt secret data on the
+fly:
+
+```
+# select * from pgsodium_masks.secrets;
+-[ RECORD 1 ]----+---------------------------------------------------------
+id               | 05fabec2-872b-45e7-abfc-26957afe5b67
+secret           | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
+decrypted_secret | s3kr3t_k3y
+key_id           | 2fb07feb-30fa-42fa-9f5f-df87931629c5
+associated       |
+nonce            | \x9dd8be2eeaa8cee1316cf9f4859daced
+created_at       | 2022-08-16 21:27:16.555253+00
+-[ RECORD 2 ]----+---------------------------------------------------------
+id               | d02f9734-db02-48cd-9fcb-daab9dd34d10
+secret           | Czs1s9UxMWkvAsUOlGCdeho37oM8MeCam1kFkwrSBsh/pKydlaPlP/AR
+decrypted_secret | s3kr3t_k3y
+key_id           | 2fb07feb-30fa-42fa-9f5f-df87931629c5
+associated       | This is the payment processor key
+nonce            | \x2fc36f6b6cb3d2dd4aac8d89c65b04d9
+created_at       | 2022-08-16 21:28:38.980329+00
+```
+
+Notice how this view has a `decrypted_secret` column that contains the
+decrypted secret keys.
 
 You should ensure that you protect access to this view with the
 appropriate SQL privilege settings at all times, as anyone that has
@@ -81,7 +129,32 @@ Automating the process of securing the secrets table for a specific
 role can be done with the `SECURITY LABEL` command:
 
 ```
-select pgsodium.update_masks();
+# CREATE ROLE bob WIT LOGIN PASSWORD 'foo';
+# SECURITY LABEL FOR pgsodium ON ROLE bob IS 'ACCESS vault.secrets';
+```
+
+Now when you connect as the role `bob`, the role's search path has
+been changed to put the view object in front of the table object in
+the search path.  This automatically gives bob access to the view:
+
+```
+bob=> select * from secrets;
+-[ RECORD 1 ]----+---------------------------------------------------------
+id               | 05fabec2-872b-45e7-abfc-26957afe5b67
+secret           | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
+decrypted_secret | s3kr3t_k3y
+key_id           | 2fb07feb-30fa-42fa-9f5f-df87931629c5
+associated       |
+nonce            | \x9dd8be2eeaa8cee1316cf9f4859daced
+created_at       | 2022-08-16 21:27:16.555253+00
+-[ RECORD 2 ]----+---------------------------------------------------------
+id               | d02f9734-db02-48cd-9fcb-daab9dd34d10
+secret           | Czs1s9UxMWkvAsUOlGCdeho37oM8MeCam1kFkwrSBsh/pKydlaPlP/AR
+decrypted_secret | s3kr3t_k3y
+key_id           | 2fb07feb-30fa-42fa-9f5f-df87931629c5
+associated       | This is the payment processor key
+nonce            | \x2fc36f6b6cb3d2dd4aac8d89c65b04d9
+created_at       | 2022-08-16 21:28:38.980329+00
 ```
 
 Labeled roles are granted access to the fully qualified table names
@@ -91,6 +164,9 @@ also as their `search_path` login configuration setting altered to the
 following:
 
 ```
+bob=> show search_path ;
+-[ RECORD 1 ]---------------------------------------------------
+search_path | pgsodium_masks, vault, pg_catalog, public, pg_temp
 ```
 
 ## Internal Details
@@ -134,5 +210,3 @@ change.
 
 In the future we are researching various ways to refine the way
 statement logging interacts with sensitive columns.
-
-
