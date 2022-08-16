@@ -1,11 +1,9 @@
+CREATE SCHEMA IF NOT EXISTS vault;
+
 SELECT pgsodium.create_key(
   'This is the initial key id used for vault.secrets',
   key_id:=1,
   key_context:='supabase');
-
-GRANT pgsodium_keyiduser TO postgres WITH ADMIN OPTION;
-GRANT pgsodium_keyholder TO postgres WITH ADMIN OPTION;
-GRANT pgsodium_keymaker  TO postgres WITH ADMIN OPTION;
 
 DO $$
   DECLARE
@@ -22,13 +20,16 @@ DO $$
         nonce      bytea DEFAULT pgsodium.crypto_aead_det_noncegen(),
         created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
-      
-      SECURITY LABEL FOR pgsodium ON COLUMN vault.secrets.secret IS
-      'ENCRYPT WITH KEY COLUMN key_id ASSOCIATED associated NONCE nonce';
       $f$, default_key_id);
   END;
 $$;
 
-ALTER EXTENSION supabase_vault DROP VIEW pgsodium_masks.secrets;  -- let pgsodium own this
+GRANT ALL ON SCHEMA vault TO postgres;
+GRANT ALL ON TABLE vault.secrets TO postgres;
 
+SECURITY LABEL FOR pgsodium ON COLUMN vault.secrets.secret IS
+'ENCRYPT WITH KEY COLUMN key_id ASSOCIATED associated NONCE nonce';
 
+SELECT pg_catalog.pg_extension_config_dump('vault.secrets', '');
+
+ALTER EXTENSION supabase_vault DROP VIEW pgsodium_masks.secrets;  -- so the view can be recreated
