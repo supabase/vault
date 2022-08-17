@@ -1,4 +1,8 @@
-# Introduction to the Vault (Beta)
+# Supabase Vault (Beta)
+
+A PostgreSQL extension for managing secrets and sensitive data.
+
+## Introduction
 
 Many applications have sensitive data that must have additional
 storage protection relative to other data.  For example, your
@@ -24,7 +28,7 @@ database, you can only refer to them by their ids.
 The Vault extension can be install from the "Extensions" tab on the
 dashboard.  Or from SQL you can do:
 
-```
+```sql
 CREATE SCHEMA vault;
 CREATE EXTENSION supabase_vault WITH SCHEMA vault;
 ```
@@ -39,8 +43,12 @@ directly with the full qualified name `vault.secrets`.
 Using the vault is as simple as `INSERT`ing data into the
 `vault.secret` table.
 
+```sql
+INSERT INTO vault.secrets (secret) 
+VALUES ('s3kr3t_k3y') RETURNING *;
 ```
-# INSERT INTO vault.secrets (secret) VALUES ('s3kr3t_k3y') RETURNING *;
+
+```
 -[ RECORD 1 ]--------------------------------------------------------
 id         | 05fabec2-872b-45e7-abfc-26957afe5b67
 secret     | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
@@ -58,8 +66,13 @@ be mixed in with the cryptographic signature verification, meaning
 that if it changes, the decryption will fail.  This pattern is called
 [Authenticated Encryption with Assocaited Data (AEAD)].
 
+```sql
+INSERT INTO vault.secrets (secret, associated) 
+VALUES ('s3kr3t_k3y', 'This is the payment processor key') 
+RETURNING *;
 ```
-# INSERT INTO vault.secrets (secret, associated) VALUES ('s3kr3t_k3y', 'This is the payment processor key') RETURNING *;
+
+```
 -[ RECORD 1 ]--------------------------------------------------------
 id         | d02f9734-db02-48cd-9fcb-daab9dd34d10
 secret     | Czs1s9UxMWkvAsUOlGCdeho37oM8MeCam1kFkwrSBsh/pKydlaPlP/AR
@@ -74,8 +87,11 @@ created_at | 2022-08-16 21:28:38.980329+00
 If you look in the `vault.secrets` table, you will see that your data
 is stored encrypted:
 
+```sql
+select * from vault.secrets;
 ```
-# select * from vault.secrets;
+
+```
 -[ RECORD 1 ]--------------------------------------------------------
 id         | 05fabec2-872b-45e7-abfc-26957afe5b67
 secret     | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
@@ -96,8 +112,11 @@ To decrypt the data, there is an automatically created view
 `pgsodium_masks.secrets`.  This view will decrypt secret data on the
 fly:
 
+```sql
+select * from pgsodium_masks.secrets;
 ```
-# select * from pgsodium_masks.secrets;
+
+```
 -[ RECORD 1 ]----+---------------------------------------------------------
 id               | 05fabec2-872b-45e7-abfc-26957afe5b67
 secret           | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
@@ -128,17 +147,20 @@ access to the view has access to decrypted secrets.
 Automating the process of securing the secrets table for a specific
 role can be done with the `SECURITY LABEL` command:
 
-```
-# CREATE ROLE bob WIT LOGIN PASSWORD 'foo';
-# SECURITY LABEL FOR pgsodium ON ROLE bob IS 'ACCESS vault.secrets';
+```sql
+CREATE ROLE bob WITH LOGIN PASSWORD 'foo';
+SECURITY LABEL FOR pgsodium ON ROLE bob IS 'ACCESS vault.secrets';
 ```
 
 Now when you connect as the role `bob`, the role's search path has
 been changed to put the view object in front of the table object in
 the search path.  This automatically gives bob access to the view:
 
+```sql
+# bob=> 
+select * from secrets;
 ```
-bob=> select * from secrets;
+```
 -[ RECORD 1 ]----+---------------------------------------------------------
 id               | 05fabec2-872b-45e7-abfc-26957afe5b67
 secret           | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
@@ -163,8 +185,11 @@ grant access to the right view and deny access to the table.  The role
 also as their `search_path` login configuration setting altered to the
 following:
 
+```sql
+# bob=> 
+show search_path ;
 ```
-bob=> show search_path ;
+```
 -[ RECORD 1 ]---------------------------------------------------
 search_path | pgsodium_masks, vault, pg_catalog, public, pg_temp
 ```
@@ -201,7 +226,7 @@ encrypted column data, because the statement logs will contain the
 *unencrypted* secrets.  If you *must* store that data encrypted, then
 you *must* turn off statement logging.
 
-```
+```sql
 ALTER SYSTEM SET statement_log = 'none';
 ```
 
