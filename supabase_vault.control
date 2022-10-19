@@ -1,4 +1,4 @@
 comment = 'Supabase Vault Extension'
-default_version = '0.0.1'
+default_version = '0.1.2'
 relocatable = false
 schema = vault
