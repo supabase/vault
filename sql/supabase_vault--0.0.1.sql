@@ -1,15 +1,12 @@
-CREATE SCHEMA IF NOT EXISTS vault;
-
 SELECT pgsodium.create_key(
-  'This is the initial key id used for vault.secrets',
-  key_id:=1,
-  key_context:='supabase');
+        name := 'default_vault_key'
+        );
 
 DO $$
   DECLARE
   default_key_id uuid;
   BEGIN
-    SELECT id INTO STRICT default_key_id FROM pgsodium.key WHERE key_id = 1 AND key_context = 'supabase';
+    SELECT id INTO STRICT default_key_id FROM pgsodium.key WHERE name = 'default_vault_key';
     EXECUTE format(
       $f$
       CREATE TABLE vault.secrets (
@@ -31,5 +28,3 @@ SECURITY LABEL FOR pgsodium ON COLUMN vault.secrets.secret IS
 'ENCRYPT WITH KEY COLUMN key_id ASSOCIATED associated NONCE nonce';
 
 SELECT pg_catalog.pg_extension_config_dump('vault.secrets', '');
-
-ALTER EXTENSION supabase_vault DROP VIEW pgsodium_masks.secrets;  -- so the view can be recreated
