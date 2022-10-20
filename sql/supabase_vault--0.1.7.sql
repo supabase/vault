@@ -2,6 +2,8 @@ SELECT pgsodium.create_key(
         name := 'default_vault_key'
         );
 
+ALTER EVENT TRIGGER pgsodium_trg_mask_update DISABLE;
+
 DO $$
   DECLARE
   default_key_id uuid;
@@ -29,7 +31,6 @@ GRANT ALL ON TABLE vault.secrets TO postgres;
 -- Have to disable system wide event trigger so only this one view
 -- gets generated and "owned" by the extension.
 
-ALTER EVENT TRIGGER pgsodium_trg_mask_update DISABLE;
 SECURITY LABEL FOR pgsodium ON COLUMN vault.secrets.secret IS
 'ENCRYPT WITH KEY COLUMN key_id ASSOCIATED associated NONCE nonce';
 
