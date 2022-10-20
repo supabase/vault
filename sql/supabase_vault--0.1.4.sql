@@ -21,10 +21,25 @@ DO $$
   END;
 $$;
 
+COMMENT ON TABLE vault.secrets IS 'Table with encrypted `secret` column for storing sensitive information on disk.';
+
 GRANT ALL ON SCHEMA vault TO postgres;
 GRANT ALL ON TABLE vault.secrets TO postgres;
 
+-- Have to disable system wide event trigger so only this one view
+-- gets generated and "owned" by the extension.
+
+ALTER EVENT TRIGGER pgsodium_trg_mask_update DISABLE;
 SECURITY LABEL FOR pgsodium ON COLUMN vault.secrets.secret IS
 'ENCRYPT WITH KEY COLUMN key_id ASSOCIATED associated NONCE nonce';
+
+-- FIXME add a utility function that does this
+SELECT pgsodium.create_mask_view(objoid, objsubid, false)
+    FROM pg_seclabel
+    WHERE objoid = 'vault.secrets'::regclass::oid
+        AND label ILIKE 'ENCRYPT%'
+        AND provider = 'pgsodium';
+
+ALTER EVENT TRIGGER pgsodium_trg_mask_update ENABLE;
 
 SELECT pg_catalog.pg_extension_config_dump('vault.secrets', '');
