@@ -12,7 +12,7 @@ DO $$
       CREATE TABLE vault.secrets (
         id uuid     PRIMARY KEY DEFAULT gen_random_uuid(),
         name        text,
-        description text,
+        description text default '',
         secret      text,
         key_id      uuid REFERENCES pgsodium.key(id) DEFAULT %L,
         nonce       bytea DEFAULT pgsodium.crypto_aead_det_noncegen(),
@@ -30,7 +30,7 @@ GRANT ALL ON SCHEMA vault TO postgres;
 GRANT ALL ON TABLE vault.secrets TO postgres;
 
 SECURITY LABEL FOR pgsodium ON COLUMN vault.secrets.secret IS
-'ENCRYPT WITH KEY COLUMN key_id ASSOCIATED (id, name, description, created_at) NONCE nonce';
+'ENCRYPT WITH KEY COLUMN key_id ASSOCIATED (id, description, created_at) NONCE nonce';
 
 -- ALTER EXTENSION supabase_vault DROP VIEW vault.decrypted_secrets;
 -- ALTER EXTENSION supabase_vault DROP FUNCTION vault.secrets_encrypt_secret;

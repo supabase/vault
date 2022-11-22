@@ -6,12 +6,13 @@ DB_HOST="supabase_vault-test-db"
 DB_NAME="postgres"
 SU="postgres"
 EXEC="docker exec $DB_HOST"
+CONFIG="-c shared_preload_libraries=pgsodium -c pgsodium.getkey_script=/pgsodium/getkey_scripts/pgsodium_getkey_urandom.sh"
 
 echo building test image
 docker build . --force-rm -t supabase_vault/test
 
 echo running test container
-docker run -d --name "$DB_HOST" -e POSTGRES_PASSWORD=password supabase_vault/test 
+docker run -d --name "$DB_HOST" -e POSTGRES_PASSWORD=password supabase_vault/test $CONFIG
 
 echo waiting for database to accept connections
 until

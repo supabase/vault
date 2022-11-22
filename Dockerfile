@@ -1,6 +1,9 @@
-FROM supabase/postgres:14.1.0.61
-RUN apt-get update && apt-get install -y make git postgresql-server-dev-14 postgresql-14-pgtap
-RUN mkdir "/vault"
+FROM postgres:15
+RUN apt-get update && apt-get install -y make build-essential curl git postgresql-server-dev-15 postgresql-15-pgtap
+RUN curl -s -L https://download.libsodium.org/libsodium/releases/libsodium-1.0.18.tar.gz | tar zxvf - && cd libsodium-1.0.18 && ./configure && make check && make -j 4 install
+RUN ldconfig
+RUN git clone https://github.com/michelp/pgsodium.git && cd pgsodium && make install
+RUN mkdir "/vault"  
 WORKDIR "/vault"
 COPY . .
 RUN make && make install
