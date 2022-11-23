@@ -24,7 +24,7 @@ do sleep 1;
 done
 
 echo running tests
-$EXEC pg_prove -U "$SU" -h localhost /vault/test.sql
+$EXEC psql -q -U "$SU" -f /vault/test.sql
 
 echo destroying test container and image
 docker rm --force "$DB_HOST"
