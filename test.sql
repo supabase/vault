@@ -1,13 +1,22 @@
+\set ECHO none
+\set QUIET 1
+
+\pset format unaligned
+\pset tuples_only true
+\pset pager
+
+\set ON_ERROR_ROLLBACK 1
+\set ON_ERROR_STOP on
 
 BEGIN;
 
-CREATE EXTENSION pgtap;
-CREATE EXTENSION pgsodium;
-CREATE EXTENSION supabase_vault;
+CREATE EXTENSION IF NOT EXISTS pgtap;
+CREATE EXTENSION supabase_vault CASCADE;
 
 select plan(3);
 
-SET ROLE postgres;
+CREATE ROLE bob login password 'bob';
+GRANT pgsodium_keyiduser TO bob;
 
 SELECT lives_ok(
   format(
@@ -30,8 +39,19 @@ SELECT throws_ok(
   'mutated description data fails decryption');
 
 TRUNCATE vault.secrets;
+COMMIT;
 
-RESET ROLE;
+\c postgres bob
+
+select plan(2);
+
+select lives_ok($test$
+    INSERT INTO vault.secrets (name, description, secret) VALUES ('foo', 'bar', 'baz')$test$,
+     'bob can insert a secret');
+
+select results_eq($test$
+    SELECT name, description, (decrypted_secret COLLATE "default") FROM vault.decrypted_secrets$test$,
+    $results$values ('foo', 'bar', 'baz')$results$,
+     'bob can query a secret');
 
 select * from finish();
-ROLLBACK
