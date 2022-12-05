@@ -14,8 +14,7 @@ docker build . -t $TAG --build-arg "version=$version"
 
 echo running test container
 docker run \
-       -p $EXPORT:5432 \
-	   -v `pwd`/example:/pgsodium/example \
+	   -v `pwd`test.sql:/vault/test.sql \
 	   -e POSTGRES_HOST_AUTH_METHOD=trust \
 	   -d --name "$DB_HOST" $TAG $CONFIG
 
