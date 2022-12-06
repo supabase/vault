@@ -13,17 +13,29 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 CREATE EXTENSION supabase_vault CASCADE;
 
-select plan(3);
+select plan(4);
 
 CREATE ROLE bob login password 'bob';
 GRANT pgsodium_keyiduser TO bob;
 
 select vault.create_secret ('s3kr3t_k3y', 'a_name', 'this is the foo key') test_secret_id \gset
 
+select vault.create_secret (
+	's3kr3t_k3y_2', 'another_name', 'this is another foo key',
+	(select id from pgsodium.key where name = 'default_vault_key')) test_secret_id \gset
+
 SELECT results_eq(
     $$
     SELECT decrypted_secret = 's3kr3t_k3y', description = 'this is the foo key'
     FROM vault.decrypted_secrets WHERE name = 'a_name';
+    $$,
+    $$VALUES (true, true)$$,
+    'can select from masking view with custome key');
+
+SELECT results_eq(
+    $$
+    SELECT decrypted_secret = 's3kr3t_k3y_2', description = 'this is another foo key'
+    FROM vault.decrypted_secrets WHERE key_id = (select id from pgsodium.key where name = 'default_vault_key');
     $$,
     $$VALUES (true, true)$$,
     'can select from masking view');
@@ -51,10 +63,12 @@ select plan(3);
 select vault.create_secret ('foo', 'bar', 'baz') bob_secret_id \gset
 
 select results_eq(
-    format($test$
+    format(
+	$test$
     SELECT (decrypted_secret COLLATE "default"), name, description FROM vault.decrypted_secrets
     WHERE id = %L::uuid
-    $test$, :'bob_secret_id'),
+    $test$,
+	:'bob_secret_id'),
     $results$values ('foo', 'bar', 'baz')$results$,
      'bob can query a secret');
 
@@ -75,11 +89,13 @@ select results_eq(
 select vault.update_secret(:'bob_secret_id', new_key_id:=(pgsodium.create_key()).id);
 
 select results_eq(
-    format($test$
+    format(
+	$test$
     SELECT (decrypted_secret COLLATE "default"), name, description
     FROM vault.decrypted_secrets
     WHERE id = %L::uuid;
-    $test$, :'bob_secret_id'),
+    $test$,
+	:'bob_secret_id'),
     $results$values ('fooz', 'barz', 'bazz')$results$,
      'bob can rotate a key id');
 
