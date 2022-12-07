@@ -37,10 +37,15 @@ GRANT ALL PRIVILEGES ON vault.decrypted_secrets TO pgsodium_keyiduser;
 CREATE OR REPLACE FUNCTION vault.create_secret(
     new_secret text,
     new_name text = NULL,
-    new_description text = '') RETURNS uuid AS
+    new_description text = '',
+	new_key_id uuid = NULL) RETURNS uuid AS
     $$
-    INSERT INTO vault.secrets (secret, name, description)
-    VALUES (new_secret, new_name, new_description)
+    INSERT INTO vault.secrets (secret, name, description, key_id)
+    VALUES (
+		new_secret,
+		new_name,
+		new_description,
+		CASE WHEN new_key_id IS NULL THEN (pgsodium.create_key()).id ELSE new_key_id END)
     RETURNING id;
     $$ LANGUAGE SQL;
 
