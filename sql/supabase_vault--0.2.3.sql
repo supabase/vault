@@ -1,11 +1,12 @@
-SELECT pgsodium.create_key(
-        name := 'default_vault_key'
-        );
-
 DO $$
   DECLARE
   default_key_id uuid;
   BEGIN
+    IF NOT EXISTS (SELECT FROM pgsodium.key WHERE name = 'default_vault_key') THEN
+      PERFORM pgsodium.create_key(
+        name := 'default_vault_key'
+      );
+    END IF;
     SELECT id INTO STRICT default_key_id FROM pgsodium.key WHERE name = 'default_vault_key';
     EXECUTE format(
       $f$
@@ -39,14 +40,14 @@ CREATE OR REPLACE FUNCTION vault.create_secret(
     new_secret text,
     new_name text = NULL,
     new_description text = '',
-	new_key_id uuid = NULL) RETURNS uuid AS
+    new_key_id uuid = NULL) RETURNS uuid AS
     $$
     INSERT INTO vault.secrets (secret, name, description, key_id)
     VALUES (
-		new_secret,
-		new_name,
-		new_description,
-		CASE WHEN new_key_id IS NULL THEN (pgsodium.create_key()).id ELSE new_key_id END)
+        new_secret,
+        new_name,
+        new_description,
+        CASE WHEN new_key_id IS NULL THEN (pgsodium.create_key()).id ELSE new_key_id END)
     RETURNING id;
     $$ LANGUAGE SQL;
 

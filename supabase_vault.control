@@ -1,5 +1,5 @@
 comment = 'Supabase Vault Extension'
-default_version = '0.2.2'
+default_version = '0.2.3'
 relocatable = false
 schema = vault
 requires = pgsodium
