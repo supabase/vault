@@ -19,7 +19,8 @@ DO $$
         created_at  timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at  timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
-      $f$, default_key_id);
+      ALTER TABLE vault.secrets OWNER TO %I;
+      $f$, default_key_id, session_user);
   END;
 $$;
 
