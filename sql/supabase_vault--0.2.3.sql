@@ -32,6 +32,9 @@ CREATE UNIQUE INDEX ON vault.secrets USING btree (name) WHERE name IS NOT NULL;
 SECURITY LABEL FOR pgsodium ON COLUMN vault.secrets.secret IS
 'ENCRYPT WITH KEY COLUMN key_id ASSOCIATED (id, description, created_at, updated_at) NONCE nonce';
 
+ALTER EXTENSION supabase_vault DROP VIEW vault.decrypted_secrets;
+ALTER EXTENSION supabase_vault DROP FUNCTION vault.secrets_encrypt_secret;
+
 GRANT ALL ON SCHEMA vault TO pgsodium_keyiduser;
 GRANT ALL ON TABLE vault.secrets TO pgsodium_keyiduser;
 GRANT ALL PRIVILEGES ON vault.decrypted_secrets TO pgsodium_keyiduser;
