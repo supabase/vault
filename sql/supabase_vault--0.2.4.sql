@@ -59,17 +59,17 @@ CREATE OR REPLACE FUNCTION vault.update_secret(
     new_secret text = NULL,
     new_name text = NULL,
     new_description text = NULL,
-    new_key_id uuid = NULL) RETURNS void AS
+    new_key_id uuid = NULL) RETURNS vault.decrypted_secrets AS
     $$
-    UPDATE vault.decrypted_secrets ds
+	UPDATE vault.decrypted_secrets s
     SET
-        secret = CASE WHEN new_secret IS NULL THEN ds.decrypted_secret ELSE new_secret END,
-        name = CASE WHEN new_name IS NULL THEN ds.name ELSE new_name END,
-        description = CASE WHEN new_description IS NULL THEN ds.description ELSE new_description END,
-        key_id = CASE WHEN new_key_id IS NULL THEN ds.key_id ELSE new_key_id END,
+        secret = CASE WHEN new_secret IS NULL THEN s.decrypted_secret ELSE new_secret END,
+        name = CASE WHEN new_name IS NULL THEN s.name ELSE new_name END,
+        description = CASE WHEN new_description IS NULL THEN s.description ELSE new_description END,
+        key_id = CASE WHEN new_key_id IS NULL THEN s.key_id ELSE new_key_id END,
         updated_at = CURRENT_TIMESTAMP
-    FROM  vault.secrets s 
-    WHERE ds.id = secret_id AND s.id = ds.id
+    WHERE s.id = secret_id
+	RETURNING *
     $$ LANGUAGE SQL;
 
 SELECT pg_catalog.pg_extension_config_dump('vault.secrets', '');
