@@ -18,11 +18,14 @@ select plan(4);
 CREATE ROLE bob login password 'bob';
 GRANT pgsodium_keyiduser TO bob;
 
-select vault.create_secret ('s3kr3t_k3y', 'a_name', 'this is the foo key') test_secret_id \gset
+select id as test_new_key_id from pgsodium.create_key(name:='test_new_key') \gset
+
+select vault.create_secret (
+	's3kr3t_k3y', 'a_name', 'this is the foo key') test_secret_id \gset
 
 select vault.create_secret (
 	's3kr3t_k3y_2', 'another_name', 'this is another foo key',
-	(select id from pgsodium.key where name = 'default_vault_key')) test_secret_id \gset
+	(select id from pgsodium.key where name = 'test_new_key')) test_secret_id_2 \gset
 
 SELECT results_eq(
     $$
@@ -30,35 +33,31 @@ SELECT results_eq(
     FROM vault.decrypted_secrets WHERE name = 'a_name';
     $$,
     $$VALUES (true, true)$$,
-    'can select from masking view with custome key');
+    'can select from masking view with custom key');
 
 SELECT results_eq(
     $$
     SELECT decrypted_secret = 's3kr3t_k3y_2', description = 'this is another foo key'
-    FROM vault.decrypted_secrets WHERE key_id = (select id from pgsodium.key where name = 'default_vault_key');
+    FROM vault.decrypted_secrets WHERE key_id = (select id from pgsodium.key where name = 'test_new_key');
     $$,
     $$VALUES (true, true)$$,
     'can select from masking view');
 
-select vault.update_secret(
-    :'test_secret_id',
-    new_description:='this is the bar key');
-
 SELECT results_eq(
-    $$
-    UPDATE vault.decrypted_secrets
-    SET description = 'this is the bar key', secret = decrypted_secret
-    where name = 'a_name' returning name, decrypted_secret collate "default", description;
-    $$,
-    $$values('a_name','s3kr3t_k3y','this is the bar key')$$,
-    'can update description');
+	format($test$
+	SELECT name, (decrypted_secret COLLATE "default"), description
+	FROM vault.update_secret(%L::uuid, new_name:='a_new_name', new_secret:='new_s3kr3t_k3y', new_description:='this is the bar key')
+	$test$, :'test_secret_id'),
+	$$values('a_new_name','new_s3kr3t_k3y','this is the bar key')$$,
+	'can update name, secret and description'
+	);
 
 TRUNCATE vault.secrets;
 COMMIT;
 
 \c postgres bob
 
-select plan(3);
+select plan(5);
 
 select vault.create_secret ('foo', 'bar', 'baz') bob_secret_id \gset
 
@@ -72,11 +71,17 @@ select results_eq(
     $results$values ('foo', 'bar', 'baz')$results$,
      'bob can query a secret');
 
-select vault.update_secret(
-    :'bob_secret_id',
+select results_eq(
+	format(
+	$test$
+	select  (decrypted_secret COLLATE "default"), name, description FROM vault.update_secret(
+    %L::uuid,
     'fooz',
     'barz',
-    'bazz');
+    'bazz')
+	$test$, :'bob_secret_id'),
+	$results$values ('fooz', 'barz', 'bazz')$results$,
+     'bob can update a secret');
 
 select results_eq(
     $test$
@@ -86,7 +91,15 @@ select results_eq(
     $results$values ('fooz', 'barz', 'bazz')$results$,
      'bob can query an updated secret');
 
-select vault.update_secret(:'bob_secret_id', new_key_id:=(pgsodium.create_key()).id);
+select results_eq(
+	format(
+	$test$
+	select  (decrypted_secret COLLATE "default"), name, description FROM vault.update_secret(
+    %L::uuid,
+	new_key_id:=(pgsodium.create_key()).id)
+	$test$, :'bob_secret_id'),
+	$results$values ('fooz', 'barz', 'bazz')$results$,
+     'bob can update key_id');
 
 select results_eq(
     format(
