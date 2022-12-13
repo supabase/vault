@@ -43,12 +43,10 @@ SELECT results_eq(
     $$VALUES (true, true)$$,
     'can select from masking view');
 
-SELECT results_eq(
+SELECT lives_ok(
 	format($test$
-	SELECT name, (decrypted_secret COLLATE "default"), description
-	FROM vault.update_secret(%L::uuid, new_name:='a_new_name', new_secret:='new_s3kr3t_k3y', new_description:='this is the bar key')
+	select vault.update_secret(%L::uuid, new_name:='a_new_name', new_secret:='new_s3kr3t_k3y', new_description:='this is the bar key')
 	$test$, :'test_secret_id'),
-	$$values('a_new_name','new_s3kr3t_k3y','this is the bar key')$$,
 	'can update name, secret and description'
 	);
 
@@ -71,16 +69,15 @@ select results_eq(
     $results$values ('foo', 'bar', 'baz')$results$,
      'bob can query a secret');
 
-select results_eq(
+select lives_ok(
 	format(
 	$test$
-	select  (decrypted_secret COLLATE "default"), name, description FROM vault.update_secret(
+	select vault.update_secret(
     %L::uuid,
     'fooz',
     'barz',
     'bazz')
 	$test$, :'bob_secret_id'),
-	$results$values ('fooz', 'barz', 'bazz')$results$,
      'bob can update a secret');
 
 select results_eq(
@@ -91,15 +88,14 @@ select results_eq(
     $results$values ('fooz', 'barz', 'bazz')$results$,
      'bob can query an updated secret');
 
-select results_eq(
+select lives_ok(
 	format(
 	$test$
-	select  (decrypted_secret COLLATE "default"), name, description FROM vault.update_secret(
+	select vault.update_secret(
     %L::uuid,
 	new_key_id:=(pgsodium.create_key()).id)
 	$test$, :'bob_secret_id'),
-	$results$values ('fooz', 'barz', 'bazz')$results$,
-     'bob can update key_id');
+    'bob can update key_id');
 
 select results_eq(
     format(
