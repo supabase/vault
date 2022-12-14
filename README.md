@@ -23,9 +23,8 @@ database, you can only refer to them by their ids.
 
 ## Installation
 
-The Vault extension can be install from the "Extensions" tab on the
-dashboard.  Or if you install the Vault yourself locally, from SQL you
-can do:
+The Vault extension is enabled by default. If you install the Vault 
+yourself locally, from SQL you can do:
 
 ```
 CREATE EXTENSION supabase_vault CASCADE;
