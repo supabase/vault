@@ -12,9 +12,11 @@ an encrypted form.
 
 Supabase provides a table called `vault.secrets` that can be used to
 store sensitive information like API keys.  These secrets will be
-stored in an encrypted format on disk and in any database dumps.
-Decrypting this table is done through a special "view" object called
-`pgsodium_masks.secrets` that uses an encryption key that is itself
+stored in an encrypted format on disk and in any database dumps.  This
+is often called [Encryption At
+Rest](https://en.wikipedia.org/wiki/Data_at_rest).  Decrypting this
+table is done through a special database view called
+`vault.decrypted_secrets` that uses an encryption key that is itself
 not avaiable to SQL, but can be referred to by ID.  Supabase manages
 these internal keys for you, so you can't leak them out of the
 database, you can only refer to them by their ids.
@@ -22,17 +24,12 @@ database, you can only refer to them by their ids.
 ## Installation
 
 The Vault extension can be install from the "Extensions" tab on the
-dashboard.  Or from SQL you can do:
+dashboard.  Or if you install the Vault yourself locally, from SQL you
+can do:
 
 ```
-CREATE SCHEMA vault;
-CREATE EXTENSION supabase_vault WITH SCHEMA vault;
+CREATE EXTENSION supabase_vault CASCADE;
 ```
-
-The `supabase_vault` extension must go into a schema named `vault`.
-This is to avoid any name confusion when accessing the sensitive
-`vault.secrets` table.  In general it is always best to refer to it
-directly with the full qualified name `vault.secrets`.
 
 ## Using the Vault
 
@@ -40,133 +37,126 @@ Using the vault is as simple as `INSERT`ing data into the
 `vault.secret` table.
 
 ```
-# INSERT INTO vault.secrets (secret) VALUES ('s3kr3t_k3y') RETURNING *;
--[ RECORD 1 ]--------------------------------------------------------
-id         | 05fabec2-872b-45e7-abfc-26957afe5b67
-secret     | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
-key_id     | 2fb07feb-30fa-42fa-9f5f-df87931629c5
-associated |
-nonce      | \x9dd8be2eeaa8cee1316cf9f4859daced
-created_at | 2022-08-16 21:27:16.555253+00
+postgres=> INSERT INTO vault.secrets (secret) VALUES ('s3kre3t_k3y') RETURNING *;
+-[ RECORD 1 ]-------------------------------------------------------------
+id          | d91596b8-1047-446c-b9c0-66d98af6d001
+name        | 
+description | 
+secret      | S02eXS9BBY+kE3r621IS8beAytEEtj+dDHjs9/0AoMy7HTbog+ylxcS22A==
+key_id      | 7f5ad44b-6bd5-4c99-9f68-4b6c7486f927
+nonce       | \x3aa2e92f9808e496aa4163a59304b895
+created_at  | 2022-12-14 02:29:21.3625+00
+updated_at  | 2022-12-14 02:29:21.3625+00
 ```
 
-Notice that the 'secret' column is now encrypted with the key id in
-the `key_id` column.
-
-You can also insert a text column called "associated".  This data will
-be mixed in with the cryptographic signature verification, meaning
-that if it changes, the decryption will fail.  This pattern is called
-[Authenticated Encryption with Assocaited Data (AEAD)].
+There is also a handy function for creating secrets called
+`vault.create_secret()`:
 
 ```
-# INSERT INTO vault.secrets (secret, associated) VALUES ('s3kr3t_k3y', 'This is the payment processor key') RETURNING *;
--[ RECORD 1 ]--------------------------------------------------------
-id         | d02f9734-db02-48cd-9fcb-daab9dd34d10
-secret     | Czs1s9UxMWkvAsUOlGCdeho37oM8MeCam1kFkwrSBsh/pKydlaPlP/AR
-key_id     | 2fb07feb-30fa-42fa-9f5f-df87931629c5
-associated | This is the payment processor key
-nonce      | \x2fc36f6b6cb3d2dd4aac8d89c65b04d9
-created_at | 2022-08-16 21:28:38.980329+00
+postgres=> select vault.create_secret('another_s3kre3t');
+-[ RECORD 1 ]-+-------------------------------------
+create_secret | c9b00867-ca8b-44fc-a81d-d20b8169be17
+
+```
+
+The function returns the UUID of the new secret.
+
+## Name and Description
+
+Secrets can also have an optional _unique_ name, or an optional
+description.  These are also arguments to `vault.create_secret()`:
+
+```
+postgres=> select vault.create_secret('another_s3kre3t', 'unique_name', 'This is the description');
+-[ RECORD 1 ]-+-------------------------------------
+create_secret | 7095d222-efe5-4cd5-b5c6-5755b451e223
+
+postgres=> select * from vault.secrets where id = '7095d222-efe5-4cd5-b5c6-5755b451e223';
+-[ RECORD 1 ]-----------------------------------------------------------------
+id          | 7095d222-efe5-4cd5-b5c6-5755b451e223
+name        | unique_name
+description | This is the description
+secret      | 3mMeOcoG84a5F2uOfy2ugWYDp9sdxvCTmi6kTeT97bvA8rCEsG5DWWZtTU8VVeE=
+key_id      | c62da7a0-b85d-471d-8ea7-52aae21d7354
+nonce       | \x9f2d60954ba5eb566445736e0760b0e3
+created_at  | 2022-12-14 02:34:23.85159+00
+updated_at  | 2022-12-14 02:34:23.85159+00
 ```
 
 ## Querying Data from the Vault
 
 If you look in the `vault.secrets` table, you will see that your data
-is stored encrypted:
+is stored encrypted. To decrypt the data, there is an automatically
+created view `vault.decrypted_secrets`.  This view will decrypt secret
+data on the fly:
 
 ```
-# select * from vault.secrets;
--[ RECORD 1 ]--------------------------------------------------------
-id         | 05fabec2-872b-45e7-abfc-26957afe5b67
-secret     | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
-key_id     | 2fb07feb-30fa-42fa-9f5f-df87931629c5
-associated |
-nonce      | \x9dd8be2eeaa8cee1316cf9f4859daced
-created_at | 2022-08-16 21:27:16.555253+00
--[ RECORD 2 ]--------------------------------------------------------
-id         | d02f9734-db02-48cd-9fcb-daab9dd34d10
-secret     | Czs1s9UxMWkvAsUOlGCdeho37oM8MeCam1kFkwrSBsh/pKydlaPlP/AR
-key_id     | 2fb07feb-30fa-42fa-9f5f-df87931629c5
-associated | This is the payment processor key
-nonce      | \x2fc36f6b6cb3d2dd4aac8d89c65b04d9
-created_at | 2022-08-16 21:28:38.980329+00
-```
-
-To decrypt the data, there is an automatically created view
-`pgsodium_masks.secrets`.  This view will decrypt secret data on the
-fly:
-
-```
-# select * from pgsodium_masks.secrets;
--[ RECORD 1 ]----+---------------------------------------------------------
-id               | 05fabec2-872b-45e7-abfc-26957afe5b67
-secret           | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
-decrypted_secret | s3kr3t_k3y
-key_id           | 2fb07feb-30fa-42fa-9f5f-df87931629c5
-associated       |
-nonce            | \x9dd8be2eeaa8cee1316cf9f4859daced
-created_at       | 2022-08-16 21:27:16.555253+00
--[ RECORD 2 ]----+---------------------------------------------------------
-id               | d02f9734-db02-48cd-9fcb-daab9dd34d10
-secret           | Czs1s9UxMWkvAsUOlGCdeho37oM8MeCam1kFkwrSBsh/pKydlaPlP/AR
-decrypted_secret | s3kr3t_k3y
-key_id           | 2fb07feb-30fa-42fa-9f5f-df87931629c5
-associated       | This is the payment processor key
-nonce            | \x2fc36f6b6cb3d2dd4aac8d89c65b04d9
-created_at       | 2022-08-16 21:28:38.980329+00
+postgres=> select * from vault.decrypted_secrets order by created_at desc limit 3;
+-[ RECORD 1 ]----+-----------------------------------------------------------------
+id               | 7095d222-efe5-4cd5-b5c6-5755b451e223
+name             | unique_name
+description      | This is the description
+secret           | 3mMeOcoG84a5F2uOfy2ugWYDp9sdxvCTmi6kTeT97bvA8rCEsG5DWWZtTU8VVeE=
+decrypted_secret | another_s3kre3t
+key_id           | c62da7a0-b85d-471d-8ea7-52aae21d7354
+nonce            | \x9f2d60954ba5eb566445736e0760b0e3
+created_at       | 2022-12-14 02:34:23.85159+00
+updated_at       | 2022-12-14 02:34:23.85159+00
+-[ RECORD 2 ]----+-----------------------------------------------------------------
+id               | c9b00867-ca8b-44fc-a81d-d20b8169be17
+name             | 
+description      | 
+secret           | a1CE4vXwQ53+N9bllJj1D7fasm59ykohjb7K90PPsRFUd9IbBdxIGZNoSQLIXl4=
+decrypted_secret | another_s3kre3t
+key_id           | 8c72b05e-b931-4372-abf9-a09cfad18489
+nonce            | \x1d3b2761548c4efb2d29ca11d44aa22f
+created_at       | 2022-12-14 02:32:50.58921+00
+updated_at       | 2022-12-14 02:32:50.58921+00
+-[ RECORD 3 ]----+-----------------------------------------------------------------
+id               | d91596b8-1047-446c-b9c0-66d98af6d001
+name             | 
+description      | 
+secret           | S02eXS9BBY+kE3r621IS8beAytEEtj+dDHjs9/0AoMy7HTbog+ylxcS22A==
+decrypted_secret | s3kre3t_k3y
+key_id           | 7f5ad44b-6bd5-4c99-9f68-4b6c7486f927
+nonce            | \x3aa2e92f9808e496aa4163a59304b895
+created_at       | 2022-12-14 02:29:21.3625+00
+updated_at       | 2022-12-14 02:29:21.3625+00
 ```
 
 Notice how this view has a `decrypted_secret` column that contains the
-decrypted secret keys.
+decrypted secrets.  Views are not stored on disk, they are only run at
+query time, so the secret remains encrypted on disk, and in any backup
+dumps or replication streams.
 
 You should ensure that you protect access to this view with the
 appropriate SQL privilege settings at all times, as anyone that has
 access to the view has access to decrypted secrets.
 
-## Labeling Users
+## Updating Secrets
 
-Automating the process of securing the secrets table for a specific
-role can be done with the `SECURITY LABEL` command:
-
-```
-# CREATE ROLE bob WIT LOGIN PASSWORD 'foo';
-# SECURITY LABEL FOR pgsodium ON ROLE bob IS 'ACCESS vault.secrets';
-```
-
-Now when you connect as the role `bob`, the role's search path has
-been changed to put the view object in front of the table object in
-the search path.  This automatically gives bob access to the view:
+A secret can be updated with the `vault.update_secret()` function,
+this function makes updating secrets easy, just provide the secret
+UUID as the first argument, and then an updated secret, updated
+optional unique name, or updated description:
 
 ```
-bob=> select * from secrets;
--[ RECORD 1 ]----+---------------------------------------------------------
-id               | 05fabec2-872b-45e7-abfc-26957afe5b67
-secret           | A7GvMKLbwUfIX29R0IDQd3jny+EeG7cVsTvO9Sdw+DfBW7yx37EucHtc
-decrypted_secret | s3kr3t_k3y
-key_id           | 2fb07feb-30fa-42fa-9f5f-df87931629c5
-associated       |
-nonce            | \x9dd8be2eeaa8cee1316cf9f4859daced
-created_at       | 2022-08-16 21:27:16.555253+00
--[ RECORD 2 ]----+---------------------------------------------------------
-id               | d02f9734-db02-48cd-9fcb-daab9dd34d10
-secret           | Czs1s9UxMWkvAsUOlGCdeho37oM8MeCam1kFkwrSBsh/pKydlaPlP/AR
-decrypted_secret | s3kr3t_k3y
-key_id           | 2fb07feb-30fa-42fa-9f5f-df87931629c5
-associated       | This is the payment processor key
-nonce            | \x2fc36f6b6cb3d2dd4aac8d89c65b04d9
-created_at       | 2022-08-16 21:28:38.980329+00
-```
+postgres=> select vault.update_secret('7095d222-efe5-4cd5-b5c6-5755b451e223', 'n3w_upd@ted_s3kret', 
+    'updated_unique_name', 'This is the updated description');
+-[ RECORD 1 ]-+-
+update_secret | 
 
-Labeled roles are granted access to the fully qualified table names
-specified in their security label.  This labeling will automatically
-grant access to the right view and deny access to the table.  The role
-also as their `search_path` login configuration setting altered to the
-following:
-
-```
-bob=> show search_path ;
--[ RECORD 1 ]---------------------------------------------------
-search_path | pgsodium_masks, vault, pg_catalog, public, pg_temp
+postgres=> select * from vault.decrypted_secrets where id = '7095d222-efe5-4cd5-b5c6-5755b451e223';
+-[ RECORD 1 ]----+---------------------------------------------------------------------
+id               | 7095d222-efe5-4cd5-b5c6-5755b451e223
+name             | updated_unique_name
+description      | This is the updated description
+secret           | lhb3HBFxF+qJzp/HHCwhjl4QFb5dYDsIQEm35DaZQOovdkgp2iy6UMufTKJGH4ThMrU=
+decrypted_secret | n3w_upd@ted_s3kret
+key_id           | c62da7a0-b85d-471d-8ea7-52aae21d7354
+nonce            | \x9f2d60954ba5eb566445736e0760b0e3
+created_at       | 2022-12-14 02:34:23.85159+00
+updated_at       | 2022-12-14 02:51:13.938396+00
 ```
 
 ## Internal Details
@@ -178,13 +168,21 @@ internally derive the encryption key used to encrypt secrets in the
 vault.  Vault users typically do not have access to the key itself,
 only the key id.
 
+Both `vault.create_secret()` and `vault.update_secret()` take an
+optional fourth `new_key_id` argument.  This argument can be used to
+store a different key id for the secret instead of the default value.
+
+```
+postgres=> select vault.create_secret('another_s3kre3t_key', 'another_unique_name', 
+   'This is another description', (pgsodium.create_key()).id);
+-[ RECORD 1 ]-+-------------------------------------
+create_secret | cec9e005-a44d-4b19-86e1-febf3cd40619
+```
+
 Which roles should have access to the `vault.secrets` table should be
 carefully considered.  There are two ways to grant access, the first
 is that the `postgres` user can explicitly grant access to the vault
 table itself.
-
-Not entirely clear here on how the grants are going to work without a
-working image to test against.
 
 ## Turning off Statement Logging
 
