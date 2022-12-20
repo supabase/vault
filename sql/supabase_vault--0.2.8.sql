@@ -1,29 +1,14 @@
-DO $$
-  DECLARE
-  default_key_id uuid;
-  BEGIN
-    IF NOT EXISTS (SELECT FROM pgsodium.key WHERE name = 'default_vault_key') THEN
-      PERFORM pgsodium.create_key(
-        name := 'default_vault_key'
-      );
-    END IF;
-    SELECT id INTO STRICT default_key_id FROM pgsodium.key WHERE name = 'default_vault_key';
-    EXECUTE format(
-      $f$
-      CREATE TABLE vault.secrets (
-        id uuid     PRIMARY KEY DEFAULT gen_random_uuid(),
-        name        text,
-        description text NOT NULL default '',
-        secret      text NOT NULL,
-        key_id      uuid REFERENCES pgsodium.key(id) DEFAULT %L,
-        nonce       bytea DEFAULT pgsodium.crypto_aead_det_noncegen(),
-        created_at  timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at  timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-      ALTER TABLE vault.secrets OWNER TO %I;
-      $f$, default_key_id, session_user);
-  END;
-$$;
+CREATE TABLE vault.secrets (
+  id uuid     PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        text,
+  description text NOT NULL default '',
+  secret      text NOT NULL,
+  key_id      uuid REFERENCES pgsodium.key(id) DEFAULT (pgsodium.create_key()).id,
+  nonce       bytea DEFAULT pgsodium.crypto_aead_det_noncegen(),
+  created_at  timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE vault.secrets OWNER TO session_user;
 
 COMMENT ON TABLE vault.secrets IS 'Table with encrypted `secret` column for storing sensitive information on disk.';
 
