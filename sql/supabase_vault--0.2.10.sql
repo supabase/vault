@@ -3,6 +3,7 @@ CREATE TABLE vault.secrets (
   name        text,
   description text NOT NULL default '',
   secret      text NOT NULL,
+  metadata    jsonb DEFAULT '{}',
   key_id      uuid REFERENCES pgsodium.key(id) DEFAULT (pgsodium.create_key()).id,
   nonce       bytea DEFAULT pgsodium.crypto_aead_det_noncegen(),
   created_at  timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -30,13 +31,15 @@ CREATE OR REPLACE FUNCTION vault.create_secret(
     new_secret text,
     new_name text = NULL,
     new_description text = '',
-    new_key_id uuid = NULL) RETURNS uuid AS
+    new_key_id uuid = NULL,
+    new_metadata = '{}'::jsonb) RETURNS uuid AS
     $$
-    INSERT INTO vault.secrets (secret, name, description, key_id)
+    INSERT INTO vault.secrets (secret, name, description, metadata, key_id)
     VALUES (
         new_secret,
         new_name,
         new_description,
+        new_metadata,
         CASE WHEN new_key_id IS NULL THEN (pgsodium.create_key()).id ELSE new_key_id END)
     RETURNING id;
     $$ LANGUAGE SQL;
@@ -46,7 +49,8 @@ CREATE OR REPLACE FUNCTION vault.update_secret(
     new_secret text = NULL,
     new_name text = NULL,
     new_description text = NULL,
-    new_key_id uuid = NULL) RETURNS void AS
+    new_key_id uuid = NULL,
+    new_metadata = NULL::jsonb) RETURNS void AS
     $$
 	UPDATE vault.decrypted_secrets s
     SET
@@ -54,6 +58,7 @@ CREATE OR REPLACE FUNCTION vault.update_secret(
         name = CASE WHEN new_name IS NULL THEN s.name ELSE new_name END,
         description = CASE WHEN new_description IS NULL THEN s.description ELSE new_description END,
         key_id = CASE WHEN new_key_id IS NULL THEN s.key_id ELSE new_key_id END,
+        metadata = CASE WHEN new_metadata IS NULL THEN s.metadata ELSE new_metadata END,
         updated_at = CURRENT_TIMESTAMP
     WHERE s.id = secret_id
     $$ LANGUAGE SQL;
