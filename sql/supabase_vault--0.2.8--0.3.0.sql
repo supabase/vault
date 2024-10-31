@@ -66,6 +66,8 @@ SELECT s.id,
   s.updated_at
 FROM vault.secrets s;
 
+GRANT ALL ON vault.decrypted_secrets TO pgsodium_keyiduser;
+
 CREATE OR REPLACE FUNCTION vault.create_secret(
   new_secret text,
   new_name text = NULL,

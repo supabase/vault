@@ -23,6 +23,7 @@ mkShell {
       pgWithExt = { pg }: pg.withPackages (p: [
         (callPackage ./nix/pgsodium.nix { postgresql = pg; })
         (callPackage ./nix/supabase_vault.nix { postgresql = pg; })
+        (callPackage ./nix/pgtap.nix { postgresql = pg; })
       ]);
       extAll = map (x: callPackage ./nix/pgScript.nix { postgresql = pgWithExt { pg = x; }; }) supportedPgVersions;
     in

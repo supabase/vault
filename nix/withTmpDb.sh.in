@@ -23,6 +23,8 @@ chmod +x "$VAULT_GETKEY_SCRIPT_PATH"
 
 pg_ctl start -o "$options"
 
-psql -v ON_ERROR_STOP=1 -c "create extension supabase_vault cascade" -d postgres
+createdb contrib_regression
+
+psql -v ON_ERROR_STOP=1 -f test/fixtures.sql -d contrib_regression
 
 "$@"

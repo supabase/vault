@@ -1,7 +1,0 @@
-Dockerfile
-test.sh
-psql.sh
-.dockerignore
-.git
-.cache
-test*
