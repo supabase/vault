@@ -8,7 +8,6 @@ CREATE TABLE vault.secrets (
   created_at  timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-ALTER TABLE vault.secrets OWNER TO session_user;
 
 COMMENT ON TABLE vault.secrets IS 'Table with encrypted `secret` column for storing sensitive information on disk.';
 

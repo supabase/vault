@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export PATH=@POSTGRESQL_PATH@/bin:"$PATH"
+
+tmpdir="$(mktemp -d)"
+
+export PGDATA="$tmpdir"
+export PGHOST="$tmpdir"
+export PGUSER=postgres
+export PGDATABASE=postgres
+
+trap 'pg_ctl stop -m i && rm -rf "$tmpdir"' sigint sigterm exit
+
+PGTZ=UTC initdb --no-locale --encoding=UTF8 --nosync -U "$PGUSER"
+VAULT_GETKEY_SCRIPT_PATH="$tmpdir/vault_getkey.sh"
+
+options="-F -c listen_addresses=\"\" -c shared_preload_libraries=pgsodium,supabase_vault -c pgsodium.getkey_script=$VAULT_GETKEY_SCRIPT_PATH -c vault.getkey_script=$VAULT_GETKEY_SCRIPT_PATH -k $PGDATA"
+
+echo "echo 0000000000000000000000000000000000000000000000000000000000000000" > "$VAULT_GETKEY_SCRIPT_PATH"
+chmod +x "$VAULT_GETKEY_SCRIPT_PATH"
+
+pg_ctl start -o "$options"
+
+psql -v ON_ERROR_STOP=1 -c "create extension supabase_vault cascade" -d postgres
+
+"$@"
