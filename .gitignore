@@ -1,0 +1,6 @@
+results/
+regression.*
+*.o
+*.so
+*.bc
+*.dylib

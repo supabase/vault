@@ -1,0 +1,15 @@
+CREATE ROLE bob login password 'bob';
+
+CREATE ROLE pgsodium_keyiduser WITH
+   NOLOGIN
+   NOSUPERUSER
+   NOCREATEDB
+   NOCREATEROLE
+   INHERIT
+   NOREPLICATION
+   CONNECTION LIMIT -1;
+
+CREATE EXTENSION IF NOT EXISTS pgtap;
+CREATE EXTENSION supabase_vault CASCADE;
+
+GRANT pgsodium_keyiduser TO bob;
