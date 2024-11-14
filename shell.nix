@@ -18,7 +18,7 @@ mkShell {
         postgresql_14
         postgresql_15
         postgresql_16
-        ourPg.postgresql_17
+        # ourPg.postgresql_17
       ];
       pgWithExt = { pg }: pg.withPackages (p: [
         (callPackage ./nix/pgsodium.nix { postgresql = pg; })
