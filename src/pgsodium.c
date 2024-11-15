@@ -112,7 +112,7 @@ pgsodium_crypto_aead_det_decrypt_by_id (PG_FUNCTION_ARGS)
 	{
 		nonce = NULL;
 	}
-	ERRORIF (VARSIZE_ANY_EXHDR (ciphertext) <=
+	ERRORIF (VARSIZE_ANY_EXHDR (ciphertext) <
 		crypto_aead_det_xchacha20_ABYTES, "%s: invalid message");
 	result_len =
 		VARSIZE_ANY_EXHDR (ciphertext) - crypto_aead_det_xchacha20_ABYTES;

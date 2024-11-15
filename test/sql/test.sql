@@ -59,4 +59,26 @@ select results_eq(
     $results$values ('fooz', 'barz', 'bazz')$results$,
      'bob can query an updated secret');
 
+truncate vault.secrets;
+reset role;
+
+do $$
+begin
+  perform vault.create_secret(
+    new_secret := '',
+    new_name := 'empty_secret'
+  );
+end
+$$;
+
+select results_eq(
+  $test$
+    select decrypted_secret collate "default"
+    from vault.decrypted_secrets
+    where name = 'empty_secret'
+  $test$,
+  $results$values ('')$results$,
+  'secret can be an empty string'
+);
+
 select * from finish();

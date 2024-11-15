@@ -1,6 +1,6 @@
 PG_CFLAGS = -std=c99 -Werror -Wno-declaration-after-statement
 EXTENSION = supabase_vault
-EXTVERSION = 0.3.0
+EXTVERSION = 0.3.1
 
 DATA = $(wildcard sql/*--*.sql)
 
