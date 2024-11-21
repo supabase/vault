@@ -13,6 +13,8 @@ RETURNS bytea
 AS 'MODULE_PATHNAME', 'pgsodium_crypto_aead_det_noncegen'
 LANGUAGE c IMMUTABLE;
 
+ALTER TABLE vault.secrets OWNER TO current_user;
+
 SECURITY LABEL ON COLUMN vault.secrets.secret IS NULL;
 
 DROP TRIGGER IF EXISTS secrets_encrypt_secret_trigger_secret ON vault.secrets;
