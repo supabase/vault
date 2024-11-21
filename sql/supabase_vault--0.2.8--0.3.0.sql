@@ -68,8 +68,6 @@ SELECT s.id,
   s.updated_at
 FROM vault.secrets s;
 
-GRANT ALL ON vault.decrypted_secrets TO pgsodium_keyiduser;
-
 CREATE OR REPLACE FUNCTION vault.create_secret(
   new_secret text,
   new_name text = NULL,
@@ -78,6 +76,7 @@ CREATE OR REPLACE FUNCTION vault.create_secret(
   new_key_id uuid = NULL
 )
 RETURNS uuid
+SECURITY DEFINER
 LANGUAGE plpgsql
 SET search_path = ''
 AS $$
@@ -113,6 +112,7 @@ CREATE OR REPLACE FUNCTION vault.update_secret(
   new_key_id uuid = NULL
 )
 RETURNS void
+SECURITY DEFINER
 LANGUAGE plpgsql
 SET search_path = ''
 AS $$
@@ -135,3 +135,14 @@ BEGIN
   WHERE s.id = secret_id;
 END
 $$;
+
+REVOKE ALL ON SCHEMA vault FROM pgsodium_keyiduser;
+REVOKE ALL ON vault.decrypted_secrets, vault.secrets FROM pgsodium_keyiduser;
+
+REVOKE ALL ON FUNCTION
+  vault._crypto_aead_det_encrypt,
+  vault._crypto_aead_det_decrypt,
+  vault._crypto_aead_det_noncegen,
+  vault.create_secret,
+  vault.update_secret
+FROM PUBLIC;
