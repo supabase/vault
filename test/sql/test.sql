@@ -59,8 +59,8 @@ select results_eq(
     $results$values ('fooz', 'barz', 'bazz')$results$,
      'bob can query an updated secret');
 
-truncate vault.secrets;
 reset role;
+truncate vault.secrets;
 
 do $$
 begin

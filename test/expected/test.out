@@ -78,8 +78,8 @@ select results_eq(
  ok 5 - bob can query an updated secret
 (1 row)
 
-truncate vault.secrets;
 reset role;
+truncate vault.secrets;
 do $$
 begin
   perform vault.create_secret(
