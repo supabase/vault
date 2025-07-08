@@ -158,31 +158,6 @@ created_at       | 2022-12-14 02:34:23.85159+00
 updated_at       | 2022-12-14 02:51:13.938396+00
 ```
 
-## Internal Details
-
-To encrypt data, you need a *key id*.  You can use the default key id
-created automatically for every project, or create your own key ids
-Using the `pgsodium.create_key()` function.  Key ids are used to
-internally derive the encryption key used to encrypt secrets in the
-vault.  Vault users typically do not have access to the key itself,
-only the key id.
-
-Both `vault.create_secret()` and `vault.update_secret()` take an
-optional fourth `new_key_id` argument.  This argument can be used to
-store a different key id for the secret instead of the default value.
-
-```
-postgres=> select vault.create_secret('another_s3kre3t_key', 'another_unique_name', 
-   'This is another description', (pgsodium.create_key()).id);
--[ RECORD 1 ]-+-------------------------------------
-create_secret | cec9e005-a44d-4b19-86e1-febf3cd40619
-```
-
-Which roles should have access to the `vault.secrets` table should be
-carefully considered.  There are two ways to grant access, the first
-is that the `postgres` user can explicitly grant access to the vault
-table itself.
-
 ## Turning off Statement Logging
 
 When you insert secrets into the vault table with an INSERT statement,
