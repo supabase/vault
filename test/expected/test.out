@@ -102,9 +102,70 @@ select results_eq(
  ok 6 - secret can be an empty string
 (1 row)
 
+-- PSQLEXT-1780: a caller must not be able to shadow types used by the
+-- SECURITY DEFINER functions with objects in their own pg_temp schema
+set role bob;
+create function pg_temp.vault_pg_temp_check(v pg_catalog.text)
+returns pg_catalog.bool
+language plpgsql
+set search_path = pg_catalog
+as $$
+begin
+  -- only fires if the check runs with the privileges of the function owner
+  if current_user <> 'bob' then
+    raise exception 'pg_temp domain check executed as %', current_user;
+  end if;
+  return true;
+end
+$$;
+create domain pg_temp.text as pg_catalog.text
+  check (pg_temp.vault_pg_temp_check(value));
+create domain pg_temp.bytea as pg_catalog.bytea
+  check (pg_temp.vault_pg_temp_check(pg_catalog.encode(value, 'hex')));
+select lives_ok(
+  $test$
+  select vault.create_secret('pg_temp_secret', 'pg_temp_name', 'pg_temp_desc')
+  $test$,
+  'create_secret does not resolve types from pg_temp');
+                         lives_ok                         
+----------------------------------------------------------
+ ok 7 - create_secret does not resolve types from pg_temp
+(1 row)
+
+select lives_ok(
+  $test$
+  select vault.update_secret(
+    (select id from vault.secrets where name = 'pg_temp_name'),
+    'pg_temp_secret_2',
+    'pg_temp_name_2',
+    'pg_temp_desc_2')
+  $test$,
+  'update_secret does not resolve types from pg_temp');
+                         lives_ok                         
+----------------------------------------------------------
+ ok 8 - update_secret does not resolve types from pg_temp
+(1 row)
+
+drop domain pg_temp.text;
+drop domain pg_temp.bytea;
+drop function pg_temp.vault_pg_temp_check(pg_catalog.text);
+select results_eq(
+  $test$
+    select (decrypted_secret collate "default"), name, description
+    from vault.decrypted_secrets
+    where name like 'pg_temp_name%'
+  $test$,
+  $results$values ('pg_temp_secret_2', 'pg_temp_name_2', 'pg_temp_desc_2')$results$,
+  'secret created and updated with shadowed pg_temp types');
+                          results_eq                           
+---------------------------------------------------------------
+ ok 9 - secret created and updated with shadowed pg_temp types
+(1 row)
+
+reset role;
 select * from finish();
  finish 
 --------
- 1..6
+ 1..9
 (1 row)
 
