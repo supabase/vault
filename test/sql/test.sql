@@ -85,3 +85,40 @@ select * from finish();
 
 -- Validate version of vault installed (no missed upgrade SQL scripts)
 SELECT extversion FROM pg_extension where extname = 'supabase_vault';
+
+
+with security_definer_fn_settings as (
+  SELECT 
+      n.nspname AS schema_name,
+      p.proname AS function_name,
+      string_to_array(unnest(p.proconfig), '=') AS configuration_setting
+  FROM pg_proc p
+  JOIN pg_namespace n ON p.pronamespace = n.oid
+  WHERE prosecdef = TRUE
+),  security_definer_fn_search_paths as (
+  SELECT
+        s.schema_name,
+        s.function_name,
+        string_to_array(btrim(s.configuration_setting[2], '"'), ',') as search_path_ary
+  FROM security_definer_fn_settings as s
+  where s.configuration_setting[1] = 'search_path'
+), security_definer_fn_search_paths_trimmed as (
+  SELECT
+        s.schema_name,
+        s.function_name,
+        array(
+    select trim(x)
+    from unnest(s.search_path_ary) with ordinality as t(x, i)
+    order by i
+  ) as search_path_ary
+  FROM security_definer_fn_search_paths as s
+)
+select 
+        s.schema_name,
+        s.function_name,
+        s.search_path_ary
+from security_definer_fn_search_paths_trimmed as s
+where 
+  array_position(s.search_path_ary, 'pg_temp') < array_position(s.search_path_ary, 'pg_catalog')
+  and array_position(s.search_path_ary, 'pg_temp') IS NOT NULL
+  and array_position(s.search_path_ary, 'pg_catalog') IS NOT NULL;
