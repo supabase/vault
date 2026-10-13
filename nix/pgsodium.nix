@@ -5,6 +5,7 @@ stdenv.mkDerivation rec {
   version = "3.1.8";
 
   buildInputs = [ libsodium postgresql ];
+  nativebuildInputs = [ libsodium postgresql ];
 
   src = fetchFromGitHub {
     owner = "michelp";
@@ -16,9 +17,9 @@ stdenv.mkDerivation rec {
   installPhase = ''
     mkdir -p $out/{lib,share/postgresql/extension}
 
-    install -D *${postgresql.dlSuffix}      $out/lib
-    install -D -t $out/share/postgresql/extension sql/*.sql
-    install -D -t $out/share/postgresql/extension *.control
+    install -D -t $out/ *${postgresql.dlSuffix}
+    install -D -t $out/ sql/*.sql
+    install -D -t $out/ *.control
   '';
 
   meta = with lib; {
