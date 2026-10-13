@@ -54,7 +54,7 @@ let
     ${pkgs.clang-tools}/bin/clang-format -i src/*
     ${pkgs.findutils}/bin/find . -name '*.nix' -exec ${pkgs.nixfmt}/bin/nixfmt {} \+
   '';
-  styleCheck = pkgs.writeShellScriptBin "vault-style-style-check" ''
+  styleCheck = pkgs.writeShellScriptBin "vault-style-check" ''
     ${pkgs.clang-tools}/bin/clang-format -i src/*
     ${pkgs.git}/bin/git diff-index --exit-code HEAD -- '*.c'
     ${pkgs.findutils}/bin/find . -name '*.nix' -exec ${pkgs.nixfmt}/bin/nixfmt --check {} \+
