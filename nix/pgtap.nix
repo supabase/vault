@@ -14,7 +14,7 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [ postgresql perl perlPackages.TAPParserSourceHandlerpgTAP which ];
 
   installPhase = ''
-    install -D {sql/pgtap--${version}.sql,pgtap.control} -t $out/share/postgresql/extension
+    install -D {sql/pgtap--${version}.sql,pgtap.control} -t $out
   '';
 
   meta = with lib; {
