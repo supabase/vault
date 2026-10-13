@@ -64,11 +64,26 @@ pkgs.mkShell {
   buildInputs = [
     (xpgPkgs.xpg.withExtensions {
       extensions = {
-        "13" = [ pgsodium13 pgtap13 ];
-        "14" = [ pgsodium14 pgtap14 ];
-        "15" = [ pgsodium15 pgtap15 ];
-        "16" = [ pgsodium16 pgtap16 ];
-        "17" = [ pgsodium17 pgtap17 ];
+        "13" = [
+          pgsodium13
+          pgtap13
+        ];
+        "14" = [
+          pgsodium14
+          pgtap14
+        ];
+        "15" = [
+          pgsodium15
+          pgtap15
+        ];
+        "16" = [
+          pgsodium16
+          pgtap16
+        ];
+        "17" = [
+          pgsodium17
+          pgtap17
+        ];
       };
     })
     pkgs.libsodium

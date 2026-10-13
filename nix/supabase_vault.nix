@@ -1,9 +1,16 @@
-{ stdenv, libsodium, postgresql }:
+{
+  stdenv,
+  libsodium,
+  postgresql,
+}:
 
 stdenv.mkDerivation rec {
   name = "supabase_vault";
 
-  buildInputs = [ libsodium postgresql ];
+  buildInputs = [
+    libsodium
+    postgresql
+  ];
 
   src = ../.;
 
