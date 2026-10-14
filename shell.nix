@@ -19,9 +19,6 @@ in
   cassert ? true,
 }:
 let
-  pgtap13 = pkgs.callPackage ./nix/pgtap.nix {
-    postgresql = xpgPkgs.postgresql_13;
-  };
   pgtap14 = pkgs.callPackage ./nix/pgtap.nix {
     postgresql = xpgPkgs.postgresql_14;
   };
@@ -35,9 +32,6 @@ let
     postgresql = xpgPkgs.postgresql_17;
   };
 
-  pgsodium13 = pkgs.callPackage ./nix/pgsodium.nix {
-    postgresql = xpgPkgs.postgresql_13;
-  };
   pgsodium14 = pkgs.callPackage ./nix/pgsodium.nix {
     postgresql = xpgPkgs.postgresql_14;
   };
@@ -64,10 +58,6 @@ pkgs.mkShell {
   buildInputs = [
     (xpgPkgs.xpg.withExtensions {
       extensions = {
-        "13" = [
-          pgsodium13
-          pgtap13
-        ];
         "14" = [
           pgsodium14
           pgtap14
