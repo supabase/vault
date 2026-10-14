@@ -34,6 +34,9 @@ let
   pgtap18 = pkgs.callPackage ./nix/pgtap.nix {
     postgresql = xpgPkgs.postgresql_18;
   };
+  pgtap19 = pkgs.callPackage ./nix/pgtap.nix {
+    postgresql = xpgPkgs.postgresql_19;
+  };
 
   pgsodium14 = pkgs.callPackage ./nix/pgsodium.nix {
     postgresql = xpgPkgs.postgresql_14;
@@ -49,6 +52,9 @@ let
   };
   pgsodium18 = pkgs.callPackage ./nix/pgsodium.nix {
     postgresql = xpgPkgs.postgresql_18;
+  };
+  pgsodium19 = pkgs.callPackage ./nix/pgsodium.nix {
+    postgresql = xpgPkgs.postgresql_19;
   };
   style = pkgs.writeShellScriptBin "vault-style" ''
     ${pkgs.clang-tools}/bin/clang-format -i src/*
@@ -83,6 +89,10 @@ pkgs.mkShell {
         "18" = [
           pgsodium18
           pgtap18
+        ];
+        "19" = [
+          pgsodium19
+          pgtap19
         ];
       };
     })
