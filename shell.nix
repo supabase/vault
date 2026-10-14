@@ -35,21 +35,6 @@ let
     postgresql = xpgPkgs.postgresql_18;
   };
 
-  pgsodium14 = pkgs.callPackage ./nix/pgsodium.nix {
-    postgresql = xpgPkgs.postgresql_14;
-  };
-  pgsodium15 = pkgs.callPackage ./nix/pgsodium.nix {
-    postgresql = xpgPkgs.postgresql_15;
-  };
-  pgsodium16 = pkgs.callPackage ./nix/pgsodium.nix {
-    postgresql = xpgPkgs.postgresql_16;
-  };
-  pgsodium17 = pkgs.callPackage ./nix/pgsodium.nix {
-    postgresql = xpgPkgs.postgresql_17;
-  };
-  pgsodium18 = pkgs.callPackage ./nix/pgsodium.nix {
-    postgresql = xpgPkgs.postgresql_18;
-  };
   style = pkgs.writeShellScriptBin "vault-style" ''
     ${pkgs.clang-tools}/bin/clang-format -i src/*
     ${pkgs.findutils}/bin/find . -name '*.nix' -exec ${pkgs.nixfmt}/bin/nixfmt {} \+
@@ -65,23 +50,18 @@ pkgs.mkShell {
     (xpgPkgs.xpg.withExtensions {
       extensions = {
         "14" = [
-          pgsodium14
           pgtap14
         ];
         "15" = [
-          pgsodium15
           pgtap15
         ];
         "16" = [
-          pgsodium16
           pgtap16
         ];
         "17" = [
-          pgsodium17
           pgtap17
         ];
         "18" = [
-          pgsodium18
           pgtap18
         ];
       };
