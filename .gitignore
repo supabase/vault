@@ -4,3 +4,4 @@ regression.*
 *.so
 *.bc
 *.dylib
+.history
