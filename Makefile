@@ -1,5 +1,5 @@
 # the `-Wno`s quiet C90 warnings
-PG_CFLAGS = -std=c99 -Werror -Wno-declaration-after-statement
+PG_CFLAGS = -std=c11 -Werror -Wno-declaration-after-statement
 ifeq ($(COVERAGE), 1)
 PG_CFLAGS += --coverage
 endif
