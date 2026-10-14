@@ -28,6 +28,10 @@ stdenv.mkDerivation rec {
 
   installPhase = ''
     install -D {sql/pgtap--${version}.sql,pgtap.control} -t $out
+
+    # Needed for >= pg18
+    mkdir $out/extension
+    install -D {sql/pgtap--${version}.sql,pgtap.control} -t $out/extension
   '';
 
   meta = with lib; {
