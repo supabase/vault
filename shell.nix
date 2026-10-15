@@ -100,7 +100,4 @@ pkgs.mkShell {
     style
     styleCheck
   ];
-  shellHook = ''
-    export HISTFILE=.history
-  '';
 }
