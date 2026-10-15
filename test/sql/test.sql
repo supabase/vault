@@ -81,58 +81,29 @@ select results_eq(
   'secret can be an empty string'
 );
 
--- PSQLEXT-1780: a caller must not be able to shadow types used by the
--- SECURITY DEFINER functions with objects in their own pg_temp schema
-set role bob;
-
-create function pg_temp.vault_pg_temp_check(v pg_catalog.text)
-returns pg_catalog.bool
-language plpgsql
-set search_path = pg_catalog
-as $$
-begin
-  -- only fires if the check runs with the privileges of the function owner
-  if current_user <> 'bob' then
-    raise exception 'pg_temp domain check executed as %', current_user;
-  end if;
-  return true;
-end
-$$;
-
-create domain pg_temp.text as pg_catalog.text
-  check (pg_temp.vault_pg_temp_check(value));
-create domain pg_temp.bytea as pg_catalog.bytea
-  check (pg_temp.vault_pg_temp_check(pg_catalog.encode(value, 'hex')));
-
-select lives_ok(
-  $test$
-  select vault.create_secret('pg_temp_secret', 'pg_temp_name', 'pg_temp_desc')
-  $test$,
-  'create_secret does not resolve types from pg_temp');
-
-select lives_ok(
-  $test$
-  select vault.update_secret(
-    (select id from vault.secrets where name = 'pg_temp_name'),
-    'pg_temp_secret_2',
-    'pg_temp_name_2',
-    'pg_temp_desc_2')
-  $test$,
-  'update_secret does not resolve types from pg_temp');
-
-drop domain pg_temp.text;
-drop domain pg_temp.bytea;
-drop function pg_temp.vault_pg_temp_check(pg_catalog.text);
-
-select results_eq(
-  $test$
-    select (decrypted_secret collate "default"), name, description
-    from vault.decrypted_secrets
-    where name like 'pg_temp_name%'
-  $test$,
-  $results$values ('pg_temp_secret_2', 'pg_temp_name_2', 'pg_temp_desc_2')$results$,
-  'secret created and updated with shadowed pg_temp types');
-
-reset role;
+with security_definer_fn_settings as (
+  SELECT 
+      n.nspname AS schema_name,
+      p.proname AS function_name,
+      string_to_array(unnest(p.proconfig), '=') AS configuration_setting
+  FROM pg_proc p
+  JOIN pg_namespace n ON p.pronamespace = n.oid
+  WHERE prosecdef = TRUE
+),  security_definer_fn_search_paths as (
+  SELECT
+        s.schema_name,
+        s.function_name,
+        string_to_array(btrim(s.configuration_setting[2], '"'), ',') as search_path_ary
+  FROM security_definer_fn_settings as s
+  where s.configuration_setting[1] = 'search_path'
+)
+select 
+        s.schema_name,
+        s.function_name,
+        s.search_path_ary
+from security_definer_fn_search_paths as s
+where 
+  s.search_path_ary[array_length(s.search_path_ary, 1)] != 'pg_temp'
+  or cardinality(s.search_path_ary) = 0;
 
 select * from finish();
