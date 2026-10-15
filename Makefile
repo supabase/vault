@@ -33,7 +33,7 @@ EXTVERSION = 0.3.1
 
 DATA = $(wildcard sql/*--*.sql)
 
-EXTRA_CLEAN = sql/$(EXTENSION)--$(EXTVERSION).sql $(EXTENSION).control
+EXTRA_CLEAN = $(EXTENSION).control
 
 TESTS = $(wildcard test/sql/*.sql)
 REGRESS = $(patsubst test/sql/%.sql,%,$(TESTS))
@@ -54,14 +54,14 @@ SHLIB_LINK = -lsodium
 # Find <curl/curl.h> from system headers
 PG_CPPFLAGS := $(CPPFLAGS) -DEXTVERSION=\"$(EXTVERSION)\"
 
-all: sql/$(EXTENSION)--$(EXTVERSION).sql $(EXTENSION).control
+all: $(EXTENSION).control
 
-build: $(BUILD_DIR)/$(EXTENSION).$(SHARED_EXT) sql/$(EXTENSION)--$(EXTVERSION).sql $(EXTENSION).control
+build: $(BUILD_DIR)/$(EXTENSION).$(SHARED_EXT) $(EXTENSION).control
 
-$(BUILD_DIR)/.gitignore: sql/$(EXTENSION)--$(EXTVERSION).sql $(EXTENSION).control
+$(BUILD_DIR)/.gitignore: $(EXTENSION).control
 	mkdir -p $(BUILD_DIR)/extension
 	cp $(EXTENSION).control $(BUILD_DIR)/extension
-	cp sql/$(EXTENSION)--$(EXTVERSION).sql $(BUILD_DIR)/extension
+	cp sql/*.sql $(BUILD_DIR)/extension
 	echo "*" > $(BUILD_DIR)/.gitignore
 
 $(BUILD_DIR)/%.o: src/%.c $(HEADERS) $(BUILD_DIR)/.gitignore
@@ -69,9 +69,6 @@ $(BUILD_DIR)/%.o: src/%.c $(HEADERS) $(BUILD_DIR)/.gitignore
 
 $(BUILD_DIR)/$(EXTENSION).$(SHARED_EXT): $(EXTENSION).$(SHARED_EXT)
 	mv $? $@
-
-sql/$(EXTENSION)--$(EXTVERSION).sql: 
-	cp sql/$(EXTENSION)--0.3.0.sql $@
 
 $(EXTENSION).control: $(EXTENSION).control.in
 	sed "s/@EXTVERSION@/$(EXTVERSION)/g" $(EXTENSION).control.in > $@
