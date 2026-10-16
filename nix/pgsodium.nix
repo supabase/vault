@@ -8,7 +8,7 @@
 
 stdenv.mkDerivation rec {
   pname = "pgsodium";
-  version = "3.1.8";
+  version = "3.1.11";
 
   buildInputs = [
     libsodium
@@ -23,7 +23,7 @@ stdenv.mkDerivation rec {
     owner = "michelp";
     repo = pname;
     rev = "refs/tags/v${version}";
-    hash = "sha256-j5F1PPdwfQRbV8XJ8Mloi8FvZF0MTl4eyIJcBYQy1E4=";
+    hash = "sha256-2Hv4rc7Q0jdd112KRm7SsdfAzFDSC8LYIDAObuA7yUg=";
   };
 
   installPhase = ''
