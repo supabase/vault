@@ -56,6 +56,26 @@ let
   pgsodium19 = pkgs.callPackage ./nix/pgsodium.nix {
     postgresql = xpgPkgs.postgresql_19;
   };
+
+  pgsqlcheck14 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_14;
+  };
+  pgsqlcheck15 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_15;
+  };
+  pgsqlcheck16 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_16;
+  };
+  pgsqlcheck17 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_17;
+  };
+  pgsqlcheck18 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_18;
+  };
+  pgsqlcheck19 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_19;
+  };
+
   style = pkgs.writeShellScriptBin "vault-style" ''
     ${pkgs.clang-tools}/bin/clang-format -i src/*
     ${pkgs.findutils}/bin/find . -name '*.nix' -exec ${pkgs.nixfmt}/bin/nixfmt {} \+
@@ -73,26 +93,32 @@ pkgs.mkShell {
         "14" = [
           pgsodium14
           pgtap14
+          pgsqlcheck14
         ];
         "15" = [
           pgsodium15
           pgtap15
+          pgsqlcheck15
         ];
         "16" = [
           pgsodium16
           pgtap16
+          pgsqlcheck16
         ];
         "17" = [
           pgsodium17
           pgtap17
+          pgsqlcheck17
         ];
         "18" = [
           pgsodium18
           pgtap18
+          pgsqlcheck18
         ];
         "19" = [
           pgsodium19
           pgtap19
+          pgsqlcheck19
         ];
       };
     })

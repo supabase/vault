@@ -1,5 +1,6 @@
 CREATE ROLE bob login password 'bob';
 
+CREATE EXTENSION plpgsql_check;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 CREATE EXTENSION supabase_vault CASCADE;
 

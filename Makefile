@@ -29,7 +29,7 @@ else
 endif
 
 EXTENSION = supabase_vault
-EXTVERSION = 0.3.1
+EXTVERSION = 0.3.2
 
 DATA = $(wildcard sql/*--*.sql)
 

@@ -82,3 +82,17 @@ select results_eq(
 );
 
 select * from finish();
+
+SELECT 
+	pg_proc.proname, 
+	plpgsql_check_function(pg_proc.oid)
+FROM pg_catalog.pg_extension 
+INNER JOIN pg_catalog.pg_depend
+ON pg_depend.refobjid = pg_extension.oid
+INNER JOIN pg_catalog.pg_proc
+ON pg_proc.oid = pg_depend.objid
+JOIN pg_catalog.pg_language 
+ON pg_proc.prolang = pg_language.oid
+WHERE extname = 'supabase_vault'
+	AND pg_language.lanname = 'plpgsql' 
+	AND pg_proc.prorettype <> 2279;
