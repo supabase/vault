@@ -32,5 +32,5 @@ END LOOP;
 END;
 $$;
 EOF) \
-  --command="\! pg_dump --schema=vault --user=postgres | grep -v -- -- | grep -v '^SET .*;' | grep -v 'SELECT pg_catalog.set_config' > supabase_vault.sql"
+  --command="\! pg_dump --schema=vault --user=postgres --schema-only | grep -v -- -- | grep -v '^SET .*;' | grep -v 'SELECT pg_catalog.set_config' | pgpp > supabase_vault.sql"
 

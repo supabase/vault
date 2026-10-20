@@ -1,41 +1,43 @@
-
-
-
-
 CREATE SCHEMA vault;
-
 
 ALTER SCHEMA vault OWNER TO postgres;
 
+CREATE FUNCTION vault._crypto_aead_det_decrypt(message bytea
+                                             , additional bytea
+                                             , key_id bigint
+                                             , context bytea = CAST('\x7067736f6469756d' AS bytea)
+                                             , nonce bytea = CAST(NULL AS bytea))
+RETURNS bytea
+LANGUAGE c IMMUTABLE AS '$libdir/supabase_vault'
+                      , 'pgsodium_crypto_aead_det_decrypt_by_id';
 
-CREATE FUNCTION vault._crypto_aead_det_decrypt(message bytea, additional bytea, key_id bigint, context bytea DEFAULT '\x7067736f6469756d'::bytea, nonce bytea DEFAULT NULL::bytea) RETURNS bytea
-    LANGUAGE c IMMUTABLE
-    AS '$libdir/supabase_vault', 'pgsodium_crypto_aead_det_decrypt_by_id';
+ALTER FUNCTION vault._crypto_aead_det_decrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) OWNER TO postgres;
 
+CREATE FUNCTION vault._crypto_aead_det_encrypt(message bytea
+                                             , additional bytea
+                                             , key_id bigint
+                                             , context bytea = CAST('\x7067736f6469756d' AS bytea)
+                                             , nonce bytea = CAST(NULL AS bytea))
+RETURNS bytea
+LANGUAGE c IMMUTABLE AS '$libdir/supabase_vault'
+                      , 'pgsodium_crypto_aead_det_encrypt_by_id';
 
-ALTER FUNCTION vault._crypto_aead_det_decrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) OWNER TO postgres;
+ALTER FUNCTION vault._crypto_aead_det_encrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) OWNER TO postgres;
 
+CREATE FUNCTION vault._crypto_aead_det_noncegen()
+RETURNS bytea
+LANGUAGE c IMMUTABLE AS '$libdir/supabase_vault'
+                      , 'pgsodium_crypto_aead_det_noncegen';
 
-CREATE FUNCTION vault._crypto_aead_det_encrypt(message bytea, additional bytea, key_id bigint, context bytea DEFAULT '\x7067736f6469756d'::bytea, nonce bytea DEFAULT NULL::bytea) RETURNS bytea
-    LANGUAGE c IMMUTABLE
-    AS '$libdir/supabase_vault', 'pgsodium_crypto_aead_det_encrypt_by_id';
+ALTER FUNCTION vault._crypto_aead_det_noncegen () OWNER TO postgres;
 
-
-ALTER FUNCTION vault._crypto_aead_det_encrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) OWNER TO postgres;
-
-
-CREATE FUNCTION vault._crypto_aead_det_noncegen() RETURNS bytea
-    LANGUAGE c IMMUTABLE
-    AS '$libdir/supabase_vault', 'pgsodium_crypto_aead_det_noncegen';
-
-
-ALTER FUNCTION vault._crypto_aead_det_noncegen() OWNER TO postgres;
-
-
-CREATE FUNCTION vault.create_secret(new_secret text, new_name text DEFAULT NULL::text, new_description text DEFAULT ''::text, new_key_id uuid DEFAULT NULL::uuid) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
+CREATE FUNCTION vault.create_secret(new_secret text
+                                  , new_name text = CAST(NULL AS text)
+                                  , new_description text = CAST('' AS text)
+                                  , new_key_id uuid = CAST(NULL AS uuid))
+RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
+AS $$
 DECLARE
   rec record;
 BEGIN
@@ -59,14 +61,16 @@ BEGIN
 END
 $$;
 
+ALTER FUNCTION vault.create_secret (new_secret text, new_name text, new_description text, new_key_id uuid) OWNER TO postgres;
 
-ALTER FUNCTION vault.create_secret(new_secret text, new_name text, new_description text, new_key_id uuid) OWNER TO postgres;
-
-
-CREATE FUNCTION vault.update_secret(secret_id uuid, new_secret text DEFAULT NULL::text, new_name text DEFAULT NULL::text, new_description text DEFAULT NULL::text, new_key_id uuid DEFAULT NULL::uuid) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
+CREATE FUNCTION vault.update_secret(secret_id uuid
+                                  , new_secret text = CAST(NULL AS text)
+                                  , new_name text = CAST(NULL AS text)
+                                  , new_description text = CAST(NULL AS text)
+                                  , new_key_id uuid = CAST(NULL AS uuid))
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
+AS $$
 DECLARE
   decrypted_secret text := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE id = secret_id);
 BEGIN
@@ -87,39 +91,44 @@ BEGIN
 END
 $$;
 
+ALTER FUNCTION vault.update_secret (secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid) OWNER TO postgres;
 
-ALTER FUNCTION vault.update_secret(secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid) OWNER TO postgres;
+GRANT USAGE
+  ON SCHEMA vault
+  TO bob
+  WITH GRANT OPTION;
 
+REVOKE ALL PRIVILEGES
+  ON FUNCTION vault._crypto_aead_det_decrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea)
+  FROM PUBLIC;
 
-COPY vault.secrets (id, name, description, secret, key_id, nonce, created_at, updated_at) FROM stdin;
-\.
+GRANT ALL PRIVILEGES
+  ON FUNCTION vault._crypto_aead_det_decrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea)
+  TO bob
+  WITH GRANT OPTION;
 
+REVOKE ALL PRIVILEGES
+  ON FUNCTION vault._crypto_aead_det_encrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea)
+  FROM PUBLIC;
 
+REVOKE ALL PRIVILEGES
+  ON FUNCTION vault._crypto_aead_det_noncegen ()
+  FROM PUBLIC;
 
-GRANT USAGE ON SCHEMA vault TO bob WITH GRANT OPTION;
+REVOKE ALL PRIVILEGES
+  ON FUNCTION vault.create_secret (new_secret text, new_name text, new_description text, new_key_id uuid)
+  FROM PUBLIC;
 
+GRANT ALL PRIVILEGES
+  ON FUNCTION vault.create_secret (new_secret text, new_name text, new_description text, new_key_id uuid)
+  TO bob
+  WITH GRANT OPTION;
 
+REVOKE ALL PRIVILEGES
+  ON FUNCTION vault.update_secret (secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid)
+  FROM PUBLIC;
 
-REVOKE ALL ON FUNCTION vault._crypto_aead_det_decrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) FROM PUBLIC;
-GRANT ALL ON FUNCTION vault._crypto_aead_det_decrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) TO bob WITH GRANT OPTION;
-
-
-
-REVOKE ALL ON FUNCTION vault._crypto_aead_det_encrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) FROM PUBLIC;
-
-
-
-REVOKE ALL ON FUNCTION vault._crypto_aead_det_noncegen() FROM PUBLIC;
-
-
-
-REVOKE ALL ON FUNCTION vault.create_secret(new_secret text, new_name text, new_description text, new_key_id uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION vault.create_secret(new_secret text, new_name text, new_description text, new_key_id uuid) TO bob WITH GRANT OPTION;
-
-
-
-REVOKE ALL ON FUNCTION vault.update_secret(secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION vault.update_secret(secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid) TO bob WITH GRANT OPTION;
-
-
-
+GRANT ALL PRIVILEGES
+  ON FUNCTION vault.update_secret (secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid)
+  TO bob
+  WITH GRANT OPTION
