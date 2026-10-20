@@ -108,3 +108,10 @@ select * from finish();
  1..6
 (1 row)
 
+-- Validate version of vault installed (no missed upgrade SQL scripts)
+SELECT extversion FROM pg_extension where extname = 'supabase_vault';
+ extversion 
+------------
+ 0.3.1
+(1 row)
+
