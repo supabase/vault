@@ -1,0 +1,183 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 17.0
+-- Dumped by pg_dump version 17.0
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: vault; Type: SCHEMA; Schema: -; Owner: postgres
+--
+
+CREATE SCHEMA vault;
+
+
+ALTER SCHEMA vault OWNER TO postgres;
+
+--
+-- Name: _crypto_aead_det_decrypt(bytea, bytea, bigint, bytea, bytea); Type: FUNCTION; Schema: vault; Owner: postgres
+--
+
+CREATE FUNCTION vault._crypto_aead_det_decrypt(message bytea, additional bytea, key_id bigint, context bytea DEFAULT '\x7067736f6469756d'::bytea, nonce bytea DEFAULT NULL::bytea) RETURNS bytea
+    LANGUAGE c IMMUTABLE
+    AS '$libdir/supabase_vault', 'pgsodium_crypto_aead_det_decrypt_by_id';
+
+
+ALTER FUNCTION vault._crypto_aead_det_decrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) OWNER TO postgres;
+
+--
+-- Name: _crypto_aead_det_encrypt(bytea, bytea, bigint, bytea, bytea); Type: FUNCTION; Schema: vault; Owner: postgres
+--
+
+CREATE FUNCTION vault._crypto_aead_det_encrypt(message bytea, additional bytea, key_id bigint, context bytea DEFAULT '\x7067736f6469756d'::bytea, nonce bytea DEFAULT NULL::bytea) RETURNS bytea
+    LANGUAGE c IMMUTABLE
+    AS '$libdir/supabase_vault', 'pgsodium_crypto_aead_det_encrypt_by_id';
+
+
+ALTER FUNCTION vault._crypto_aead_det_encrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) OWNER TO postgres;
+
+--
+-- Name: _crypto_aead_det_noncegen(); Type: FUNCTION; Schema: vault; Owner: postgres
+--
+
+CREATE FUNCTION vault._crypto_aead_det_noncegen() RETURNS bytea
+    LANGUAGE c IMMUTABLE
+    AS '$libdir/supabase_vault', 'pgsodium_crypto_aead_det_noncegen';
+
+
+ALTER FUNCTION vault._crypto_aead_det_noncegen() OWNER TO postgres;
+
+--
+-- Name: create_secret(text, text, text, uuid); Type: FUNCTION; Schema: vault; Owner: postgres
+--
+
+CREATE FUNCTION vault.create_secret(new_secret text, new_name text DEFAULT NULL::text, new_description text DEFAULT ''::text, new_key_id uuid DEFAULT NULL::uuid) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  rec record;
+BEGIN
+  INSERT INTO vault.secrets (secret, name, description)
+  VALUES (
+    new_secret,
+    new_name,
+    new_description
+  )
+  RETURNING * INTO rec;
+  UPDATE vault.secrets s
+  SET secret = encode(vault._crypto_aead_det_encrypt(
+    message := convert_to(rec.secret, 'utf8'),
+    additional := convert_to(s.id::text, 'utf8'),
+    key_id := 0,
+    context := 'pgsodium'::bytea,
+    nonce := rec.nonce
+  ), 'base64')
+  WHERE id = rec.id;
+  RETURN rec.id;
+END
+$$;
+
+
+ALTER FUNCTION vault.create_secret(new_secret text, new_name text, new_description text, new_key_id uuid) OWNER TO postgres;
+
+--
+-- Name: update_secret(uuid, text, text, text, uuid); Type: FUNCTION; Schema: vault; Owner: postgres
+--
+
+CREATE FUNCTION vault.update_secret(secret_id uuid, new_secret text DEFAULT NULL::text, new_name text DEFAULT NULL::text, new_description text DEFAULT NULL::text, new_key_id uuid DEFAULT NULL::uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+DECLARE
+  decrypted_secret text := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE id = secret_id);
+BEGIN
+  UPDATE vault.secrets s
+  SET
+    secret = CASE WHEN new_secret IS NULL THEN s.secret
+                  ELSE encode(vault._crypto_aead_det_encrypt(
+                    message := convert_to(new_secret, 'utf8'),
+                    additional := convert_to(s.id::text, 'utf8'),
+                    key_id := 0,
+                    context := 'pgsodium'::bytea,
+                    nonce := s.nonce
+                  ), 'base64') END,
+    name = coalesce(new_name, s.name),
+    description = coalesce(new_description, s.description),
+    updated_at = now()
+  WHERE s.id = secret_id;
+END
+$$;
+
+
+ALTER FUNCTION vault.update_secret(secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid) OWNER TO postgres;
+
+--
+-- Data for Name: secrets; Type: TABLE DATA; Schema: vault; Owner: postgres
+--
+
+COPY vault.secrets (id, name, description, secret, key_id, nonce, created_at, updated_at) FROM stdin;
+\.
+
+
+--
+-- Name: SCHEMA vault; Type: ACL; Schema: -; Owner: postgres
+--
+
+GRANT USAGE ON SCHEMA vault TO bob WITH GRANT OPTION;
+
+
+--
+-- Name: FUNCTION _crypto_aead_det_decrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea); Type: ACL; Schema: vault; Owner: postgres
+--
+
+REVOKE ALL ON FUNCTION vault._crypto_aead_det_decrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) FROM PUBLIC;
+GRANT ALL ON FUNCTION vault._crypto_aead_det_decrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) TO bob WITH GRANT OPTION;
+
+
+--
+-- Name: FUNCTION _crypto_aead_det_encrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea); Type: ACL; Schema: vault; Owner: postgres
+--
+
+REVOKE ALL ON FUNCTION vault._crypto_aead_det_encrypt(message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _crypto_aead_det_noncegen(); Type: ACL; Schema: vault; Owner: postgres
+--
+
+REVOKE ALL ON FUNCTION vault._crypto_aead_det_noncegen() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION create_secret(new_secret text, new_name text, new_description text, new_key_id uuid); Type: ACL; Schema: vault; Owner: postgres
+--
+
+REVOKE ALL ON FUNCTION vault.create_secret(new_secret text, new_name text, new_description text, new_key_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION vault.create_secret(new_secret text, new_name text, new_description text, new_key_id uuid) TO bob WITH GRANT OPTION;
+
+
+--
+-- Name: FUNCTION update_secret(secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid); Type: ACL; Schema: vault; Owner: postgres
+--
+
+REVOKE ALL ON FUNCTION vault.update_secret(secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION vault.update_secret(secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid) TO bob WITH GRANT OPTION;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
