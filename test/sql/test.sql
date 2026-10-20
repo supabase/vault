@@ -82,3 +82,6 @@ select results_eq(
 );
 
 select * from finish();
+
+-- Validate version of vault installed (no missed upgrade SQL scripts)
+SELECT extversion FROM pg_extension where extname = 'supabase_vault';
