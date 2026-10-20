@@ -1,5 +1,4 @@
 #! /usr/bin/env bash
-
 xpg psql \
   --file=<(cat << 'EOF'
 DO $$
@@ -33,5 +32,5 @@ END LOOP;
 END;
 $$;
 EOF) \
-  --command='\! pg_dump --schema=vault --user=postgres --file=supabase_vault.sql'
+  --command="\! pg_dump --schema=vault --user=postgres | grep -v -- -- | grep -v '^SET .*;' | grep -v 'SELECT pg_catalog.set_config' > supabase_vault.sql"
 
