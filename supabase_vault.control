@@ -1,5 +1,0 @@
-comment = 'Supabase Vault Extension'
-default_version = '0.3.1'
-module_pathname = '$libdir/supabase_vault'
-relocatable = false
-schema = vault
