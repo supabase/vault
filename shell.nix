@@ -19,25 +19,6 @@ in
   cassert ? true,
 }:
 let
-  pgtap14 = pkgs.callPackage ./nix/pgtap.nix {
-    postgresql = xpgPkgs.postgresql_14;
-  };
-  pgtap15 = pkgs.callPackage ./nix/pgtap.nix {
-    postgresql = xpgPkgs.postgresql_15;
-  };
-  pgtap16 = pkgs.callPackage ./nix/pgtap.nix {
-    postgresql = xpgPkgs.postgresql_16;
-  };
-  pgtap17 = pkgs.callPackage ./nix/pgtap.nix {
-    postgresql = xpgPkgs.postgresql_17;
-  };
-  pgtap18 = pkgs.callPackage ./nix/pgtap.nix {
-    postgresql = xpgPkgs.postgresql_18;
-  };
-  pgtap19 = pkgs.callPackage ./nix/pgtap.nix {
-    postgresql = xpgPkgs.postgresql_19;
-  };
-
   style = pkgs.writeShellScriptBin "vault-style" ''
     ${pkgs.clang-tools}/bin/clang-format -i src/*
     ${pkgs.findutils}/bin/find . -name '*.nix' -exec ${pkgs.nixfmt}/bin/nixfmt {} \+
@@ -53,22 +34,16 @@ pkgs.mkShell {
     (xpgPkgs.xpg.withExtensions {
       extensions = {
         "14" = [
-          pgtap14
         ];
         "15" = [
-          pgtap15
         ];
         "16" = [
-          pgtap16
         ];
         "17" = [
-          pgtap17
         ];
         "18" = [
-          pgtap18
         ];
         "19" = [
-          pgtap19
         ];
       };
     })

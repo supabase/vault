@@ -1,6 +1,5 @@
 CREATE ROLE bob login password 'bob';
 
-CREATE EXTENSION IF NOT EXISTS pgtap;
 CREATE EXTENSION supabase_vault CASCADE;
 
 GRANT USAGE ON SCHEMA vault TO bob WITH GRANT OPTION;

@@ -1,36 +1,23 @@
-select no_plan();
- no_plan 
----------
-(0 rows)
-
 do $$
 begin
   perform vault.create_secret('s3kr3t_k3y', 'a_name', 'this is the foo secret key');
 end
 $$;
-SELECT results_eq(
-    $$
-    SELECT decrypted_secret = 's3kr3t_k3y', description = 'this is the foo secret key'
-    FROM vault.decrypted_secrets WHERE name = 'a_name';
-    $$,
-    $$VALUES (true, true)$$,
-    'can select from masking view with custom key');
-                     results_eq                      
------------------------------------------------------
- ok 1 - can select from masking view with custom key
+-- can select from masking view with custom key
+SELECT decrypted_secret, description 
+FROM vault.decrypted_secrets WHERE name = 'a_name';
+ decrypted_secret |        description         
+------------------+----------------------------
+ s3kr3t_k3y       | this is the foo secret key
 (1 row)
 
-SELECT lives_ok(
-	$test$
-	select vault.update_secret(
-	    (select id from vault.secrets where name = 'a_name'), new_name:='a_new_name',
-	    new_secret:='new_s3kr3t_k3y', new_description:='this is the bar key')
-	$test$,
-	'can update name, secret and description'
-	);
-                    lives_ok                    
-------------------------------------------------
- ok 2 - can update name, secret and description
+-- can update name, secret and description
+select vault.update_secret(
+    (select id from vault.secrets where name = 'a_name'), new_name:='a_new_name',
+    new_secret:='new_s3kr3t_k3y', new_description:='this is the bar key');
+ update_secret 
+---------------
+ 
 (1 row)
 
 TRUNCATE vault.secrets;
@@ -40,42 +27,31 @@ begin
   perform vault.create_secret ('foo', 'bar', 'baz');
 end
 $$;
-select results_eq(
-	$test$
-    SELECT (decrypted_secret COLLATE "default"), name, description FROM vault.decrypted_secrets
-    WHERE name = 'bar'
-    $test$,
-    $results$values ('foo', 'bar', 'baz')$results$,
-     'bob can query a secret');
-          results_eq           
--------------------------------
- ok 3 - bob can query a secret
+-- bob can query a secret
+SELECT (decrypted_secret COLLATE "default"), name, description FROM vault.decrypted_secrets
+WHERE name = 'bar';
+ decrypted_secret | name | description 
+------------------+------+-------------
+ foo              | bar  | baz
 (1 row)
 
-select lives_ok(
-	$test$
-	select vault.update_secret(
-    (select id from vault.secrets where name = 'bar'),
-    'fooz',
-    'barz',
-    'bazz')
-	$test$,
-     'bob can update a secret');
-            lives_ok            
---------------------------------
- ok 4 - bob can update a secret
+-- bob can update a secret
+select vault.update_secret(
+(select id from vault.secrets where name = 'bar'),
+'fooz',
+'barz',
+'bazz');
+ update_secret 
+---------------
+ 
 (1 row)
 
-select results_eq(
-    $test$
-    SELECT (decrypted_secret COLLATE "default"), name, description
-    FROM vault.decrypted_secrets
-    $test$,
-    $results$values ('fooz', 'barz', 'bazz')$results$,
-     'bob can query an updated secret');
-               results_eq               
-----------------------------------------
- ok 5 - bob can query an updated secret
+-- bob can query an updated secret
+SELECT (decrypted_secret COLLATE "default"), name, description
+FROM vault.decrypted_secrets;
+ decrypted_secret | name | description 
+------------------+------+-------------
+ fooz             | barz | bazz
 (1 row)
 
 reset role;
@@ -88,24 +64,13 @@ begin
   );
 end
 $$;
-select results_eq(
-  $test$
-    select decrypted_secret collate "default"
-    from vault.decrypted_secrets
-    where name = 'empty_secret'
-  $test$,
-  $results$values ('')$results$,
-  'secret can be an empty string'
-);
-              results_eq              
---------------------------------------
- ok 6 - secret can be an empty string
-(1 row)
-
-select * from finish();
- finish 
---------
- 1..6
+-- secret can be an empty string
+select decrypted_secret collate "default"
+from vault.decrypted_secrets
+where name = 'empty_secret';
+ decrypted_secret 
+------------------
+ 
 (1 row)
 
 -- Validate version of vault installed (no missed upgrade SQL scripts)

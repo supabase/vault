@@ -1,4 +1,3 @@
-select no_plan();
 
 do $$
 begin
@@ -6,22 +5,14 @@ begin
 end
 $$;
 
-SELECT results_eq(
-    $$
-    SELECT decrypted_secret = 's3kr3t_k3y', description = 'this is the foo secret key'
-    FROM vault.decrypted_secrets WHERE name = 'a_name';
-    $$,
-    $$VALUES (true, true)$$,
-    'can select from masking view with custom key');
+-- can select from masking view with custom key
+SELECT decrypted_secret, description 
+FROM vault.decrypted_secrets WHERE name = 'a_name';
 
-SELECT lives_ok(
-	$test$
-	select vault.update_secret(
-	    (select id from vault.secrets where name = 'a_name'), new_name:='a_new_name',
-	    new_secret:='new_s3kr3t_k3y', new_description:='this is the bar key')
-	$test$,
-	'can update name, secret and description'
-	);
+-- can update name, secret and description
+select vault.update_secret(
+    (select id from vault.secrets where name = 'a_name'), new_name:='a_new_name',
+    new_secret:='new_s3kr3t_k3y', new_description:='this is the bar key');
 
 TRUNCATE vault.secrets;
 
@@ -33,31 +24,20 @@ begin
 end
 $$;
 
-select results_eq(
-	$test$
-    SELECT (decrypted_secret COLLATE "default"), name, description FROM vault.decrypted_secrets
-    WHERE name = 'bar'
-    $test$,
-    $results$values ('foo', 'bar', 'baz')$results$,
-     'bob can query a secret');
+-- bob can query a secret
+SELECT (decrypted_secret COLLATE "default"), name, description FROM vault.decrypted_secrets
+WHERE name = 'bar';
 
-select lives_ok(
-	$test$
-	select vault.update_secret(
-    (select id from vault.secrets where name = 'bar'),
-    'fooz',
-    'barz',
-    'bazz')
-	$test$,
-     'bob can update a secret');
+-- bob can update a secret
+select vault.update_secret(
+(select id from vault.secrets where name = 'bar'),
+'fooz',
+'barz',
+'bazz');
 
-select results_eq(
-    $test$
-    SELECT (decrypted_secret COLLATE "default"), name, description
-    FROM vault.decrypted_secrets
-    $test$,
-    $results$values ('fooz', 'barz', 'bazz')$results$,
-     'bob can query an updated secret');
+-- bob can query an updated secret
+SELECT (decrypted_secret COLLATE "default"), name, description
+FROM vault.decrypted_secrets;
 
 reset role;
 truncate vault.secrets;
@@ -71,17 +51,10 @@ begin
 end
 $$;
 
-select results_eq(
-  $test$
-    select decrypted_secret collate "default"
-    from vault.decrypted_secrets
-    where name = 'empty_secret'
-  $test$,
-  $results$values ('')$results$,
-  'secret can be an empty string'
-);
-
-select * from finish();
+-- secret can be an empty string
+select decrypted_secret collate "default"
+from vault.decrypted_secrets
+where name = 'empty_secret';
 
 -- Validate version of vault installed (no missed upgrade SQL scripts)
 SELECT extversion FROM pg_extension where extname = 'supabase_vault';
