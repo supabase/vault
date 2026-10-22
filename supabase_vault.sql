@@ -36,7 +36,7 @@ CREATE FUNCTION vault.create_secret(new_secret text
                                   , new_description text = CAST('' AS text)
                                   , new_key_id uuid = CAST(NULL AS uuid))
 RETURNS uuid
-LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'pg_temp'
 AS $$
 DECLARE
   rec record;
@@ -69,7 +69,7 @@ CREATE FUNCTION vault.update_secret(secret_id uuid
                                   , new_description text = CAST(NULL AS text)
                                   , new_key_id uuid = CAST(NULL AS uuid))
 RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path TO ''
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'pg_temp'
 AS $$
 DECLARE
   decrypted_secret text := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE id = secret_id);
