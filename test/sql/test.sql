@@ -2,6 +2,18 @@
 SELECT boot_val LIKE '%/extension/pgsodium_getkey' AS boot_val_ok
 FROM pg_settings WHERE name = 'vault.getkey_script';
 
+CREATE ROLE bob login password 'bob';
+
+CREATE EXTENSION supabase_vault CASCADE;
+CREATE EXTENSION plpgsql_check CASCADE;
+
+GRANT USAGE ON SCHEMA vault TO bob WITH GRANT OPTION;
+GRANT SELECT ON vault.secrets, vault.decrypted_secrets TO bob WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION
+  vault.create_secret,
+  vault.update_secret,
+  vault._crypto_aead_det_decrypt
+TO bob WITH GRANT OPTION;
 
 do $$
 begin

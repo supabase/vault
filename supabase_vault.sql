@@ -91,19 +91,9 @@ $$;
 
 ALTER FUNCTION vault.update_secret (secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid) OWNER TO postgres;
 
-GRANT USAGE
-  ON SCHEMA vault
-  TO bob
-  WITH GRANT OPTION;
-
 REVOKE ALL PRIVILEGES
   ON FUNCTION vault._crypto_aead_det_decrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea)
   FROM PUBLIC;
-
-GRANT ALL PRIVILEGES
-  ON FUNCTION vault._crypto_aead_det_decrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea)
-  TO bob
-  WITH GRANT OPTION;
 
 REVOKE ALL PRIVILEGES
   ON FUNCTION vault._crypto_aead_det_encrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea)
@@ -117,16 +107,6 @@ REVOKE ALL PRIVILEGES
   ON FUNCTION vault.create_secret (new_secret text, new_name text, new_description text, new_key_id uuid)
   FROM PUBLIC;
 
-GRANT ALL PRIVILEGES
-  ON FUNCTION vault.create_secret (new_secret text, new_name text, new_description text, new_key_id uuid)
-  TO bob
-  WITH GRANT OPTION;
-
 REVOKE ALL PRIVILEGES
   ON FUNCTION vault.update_secret (secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid)
-  FROM PUBLIC;
-
-GRANT ALL PRIVILEGES
-  ON FUNCTION vault.update_secret (secret_id uuid, new_secret text, new_name text, new_description text, new_key_id uuid)
-  TO bob
-  WITH GRANT OPTION
+  FROM PUBLIC
