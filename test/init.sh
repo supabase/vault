@@ -1,2 +1,2 @@
-echo "echo 0000000000000000000000000000000000000000000000000000000000000000" > "$TMPDIR/vault_getkey.sh"
-chmod +x "$TMPDIR/vault_getkey.sh"
+echo "echo 0000000000000000000000000000000000000000000000000000000000000000" > "/tmp/vault_getkey.sh"
+chmod +x "/tmp/vault_getkey.sh"
