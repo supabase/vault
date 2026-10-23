@@ -6,11 +6,9 @@ ALTER FUNCTION vault.update_secret SECURITY INVOKER;
 DO $$
 DECLARE
     user_record RECORD;
-    initial_user text;
 BEGIN
 
    -- TODO should we lock down routine by arg names? probably
-    SELECT current_user into initial_user;
     FOR user_record IN 
 	SELECT grantor, grantee 
 	FROM information_schema.routine_privileges 
@@ -19,10 +17,8 @@ BEGIN
 		AND grantee NOT IN (SELECT rolname FROM pg_roles where rolsuper)
 
     LOOP
-        -- Dynamically execute the grant command for each user
-        EXECUTE format('set role TO %I;', user_record.grantor);
-        EXECUTE format('GRANT insert on table vault.secrets %I;', user_record.grantee);
-        EXECUTE format('set role TO %I;', initial_user);
+	-- TODO Should this cover 'with grant option'?
+        EXECUTE format('GRANT insert on table vault.secrets %I GRANTED BY %I;', user_record.grantee, user_record.grantor);
     END LOOP;
 END $$;
 
@@ -31,9 +27,9 @@ END $$;
 DO $$
 DECLARE
     user_record RECORD;
-    initial_user text;
 BEGIN
 
+   -- TODO should we lock down routine by arg names? probably
     FOR user_record IN 
 	SELECT grantor, grantee 
 	FROM information_schema.routine_privileges 
@@ -41,10 +37,8 @@ BEGIN
 		AND routine_name = 'update_secret' 
 		AND grantee NOT IN (SELECT rolname FROM pg_roles where rolsuper)
     LOOP
-        -- Dynamically execute the grant command for each user
-        EXECUTE format('set role TO %I;', user_record.grantor);
-        EXECUTE format('GRANT update on table vault.secrets TO %I', user_record.grantee);
-        EXECUTE format('set role TO %I;', initial_user);
+	-- TODO Should this cover 'with grant option'?
+        EXECUTE format('GRANT update on table vault.secrets TO %I GRANTED BY %I', user_record.grantee, user_record.grantor);
 
     END LOOP;
 END $$;
