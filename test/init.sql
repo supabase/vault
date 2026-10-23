@@ -1,5 +1,6 @@
 CREATE ROLE bob login password 'bob';
 
+CREATE EXTENSION plpgsql_check;
 CREATE EXTENSION supabase_vault CASCADE;
 
 GRANT USAGE ON SCHEMA vault TO bob WITH GRANT OPTION;
