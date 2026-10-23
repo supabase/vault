@@ -71,8 +71,6 @@ CREATE FUNCTION vault.update_secret(secret_id uuid
 RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'pg_temp'
 AS $$
-DECLARE
-  decrypted_secret text := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE id = secret_id);
 BEGIN
   UPDATE vault.secrets s
   SET
