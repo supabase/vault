@@ -9,7 +9,13 @@ DECLARE
 BEGIN
 
     FOR user_record IN 
-	SELECT grantor, grantee 
+	SELECT 
+		grantor, 
+		grantee,
+		CASE 
+			when is_grantable = 'YES' THEN 'WITH GRANT OPTION'
+			else ''
+		END AS grantable
 	FROM information_schema.routine_privileges 
 	WHERE specific_name in (
 			SELECT proname || '_' || oid 
@@ -21,8 +27,7 @@ BEGIN
 		AND grantee NOT IN (SELECT rolname FROM pg_roles where rolsuper)
 
     LOOP
-	-- TODO Should this cover 'with grant option'?
-        EXECUTE format('GRANT update on table vault.secrets %I GRANTED BY %I;', user_record.grantee, user_record.grantor);
+        EXECUTE format('GRANT update on table vault.secrets TO %I %I GRANTED BY %I;', user_record.grantee, user_record.grantable, user_record.grantor);
     END LOOP;
 END $$;
 
@@ -35,7 +40,13 @@ BEGIN
 
    -- TODO should we lock down routine by arg names? probably
     FOR user_record IN 
-	SELECT grantor, grantee 
+	SELECT 
+		grantor, 
+		grantee,
+		CASE 
+			when is_grantable = 'YES' THEN 'WITH GRANT OPTION'
+			else ''
+		END AS grantable
 	FROM information_schema.routine_privileges 
 	WHERE specific_name in (
 			SELECT proname || '_' || oid 
@@ -47,7 +58,7 @@ BEGIN
 		AND grantee NOT IN (SELECT rolname FROM pg_roles where rolsuper)
     LOOP
 	-- TODO Should this cover 'with grant option'?
-        EXECUTE format('GRANT insert on table vault.secrets TO %I GRANTED BY %I', user_record.grantee, user_record.grantor);
+        EXECUTE format('GRANT insert on table vault.secrets TO %I %I GRANTED BY %I', user_record.grantee, user_record.grantable, user_record.grantor);
 
     END LOOP;
 END $$;
