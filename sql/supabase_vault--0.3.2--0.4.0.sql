@@ -38,7 +38,6 @@ DECLARE
     user_record RECORD;
 BEGIN
 
-   -- TODO should we lock down routine by arg names? probably
     FOR user_record IN 
 	SELECT 
 		grantor, 
@@ -57,7 +56,6 @@ BEGIN
 		AND routine_schema  = 'vault' 
 		AND grantee NOT IN (SELECT rolname FROM pg_roles where rolsuper)
     LOOP
-	-- TODO Should this cover 'with grant option'?
         EXECUTE format('GRANT insert on table vault.secrets TO %I %I GRANTED BY %I', user_record.grantee, user_record.grantable, user_record.grantor);
 
     END LOOP;
