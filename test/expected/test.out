@@ -119,3 +119,46 @@ WITH security_definer_fn_settings AS (
 -------------+---------------+-----------------
 (0 rows)
 
+-- below query based on an example from from pgsql_check's git repo, link below
+-- https://github.com/okbob/plpgsql_check/blob/0ac96adc13b34d071c4be8ba0ec4f73e6e7520f5/README.md?plain=1#L310
+-- check all plpgsql functions (functions or trigger functions with defined triggers)
+SELECT CAST(((pcf)).functionid AS regprocedure)
+     , ((pcf)).lineno
+     , ((pcf)).statement
+     , ((pcf)).sqlstate
+     , ((pcf)).message
+     , ((pcf)).detail
+     , ((pcf)).hint
+     , ((pcf)).level
+     , ((pcf)).position
+     , ((pcf)).query
+     , ((pcf)).context
+FROM (SELECT plpgsql_check_function_tb(pg_proc.oid
+                                     , COALESCE(pg_trigger.tgrelid, 0)
+                                     , oldtable => pg_trigger.tgoldtable
+                                     , newtable => pg_trigger.tgnewtable) AS pcf
+      FROM pg_proc
+           LEFT JOIN pg_trigger ON pg_trigger.tgfoid = pg_proc.oid
+	   INNER JOIN pg_catalog.pg_depend ON pg_proc.oid = pg_depend.objid
+           INNER JOIN pg_catalog.pg_extension ON pg_depend.refobjid = pg_extension.oid
+     
+      WHERE prolang = (SELECT lang.oid
+                       FROM pg_language AS lang
+                       WHERE lang.lanname = 'plpgsql')
+AND extname = 'supabase_vault'
+        AND pronamespace <> (SELECT nsp.oid
+                             FROM pg_namespace AS nsp
+                             WHERE nsp.nspname = 'pg_catalog')
+        AND (pg_proc.prorettype <> (SELECT typ.oid
+                                    FROM pg_type AS typ
+                                    WHERE typ.typname = 'trigger')
+          OR pg_trigger.tgfoid IS NOT NULL)
+      OFFSET 0) AS ss
+ORDER BY CAST(CAST(((pcf)).functionid AS regprocedure) AS text)
+       , ((pcf)).lineno;
+                  functionid                   | lineno | statement | sqlstate |            message            | detail | hint |     level     | position | query | context 
+-----------------------------------------------+--------+-----------+----------+-------------------------------+--------+------+---------------+----------+-------+---------
+ vault.create_secret(text,text,text,uuid)      |        |           | 00000    | unused parameter "new_key_id" |        |      | warning extra |          |       | 
+ vault.update_secret(uuid,text,text,text,uuid) |        |           | 00000    | unused parameter "new_key_id" |        |      | warning extra |          |       | 
+(2 rows)
+

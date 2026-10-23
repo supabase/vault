@@ -19,6 +19,25 @@ in
   cassert ? true,
 }:
 let
+  plpgsqlcheck14 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_14;
+  };
+  plpgsqlcheck15 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_15;
+  };
+  plpgsqlcheck16 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_16;
+  };
+  plpgsqlcheck17 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_17;
+  };
+  plpgsqlcheck18 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_18;
+  };
+  plpgsqlcheck19 = pkgs.callPackage ./nix/plpgsql-check.nix {
+    postgresql = xpgPkgs.postgresql_19;
+  };
+
   style = pkgs.writeShellScriptBin "vault-style" ''
     ${pkgs.clang-tools}/bin/clang-format -i src/*
     ${pkgs.findutils}/bin/find . -name '*.nix' -exec ${pkgs.nixfmt}/bin/nixfmt {} \+
@@ -34,16 +53,22 @@ pkgs.mkShell {
     (xpgPkgs.xpg.withExtensions {
       extensions = {
         "14" = [
+          plpgsqlcheck14
         ];
         "15" = [
+          plpgsqlcheck15
         ];
         "16" = [
+          plpgsqlcheck16
         ];
         "17" = [
+          plpgsqlcheck17
         ];
         "18" = [
+          plpgsqlcheck18
         ];
         "19" = [
+          plpgsqlcheck19
         ];
       };
     })
