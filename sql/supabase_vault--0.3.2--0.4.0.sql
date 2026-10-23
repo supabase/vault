@@ -8,17 +8,21 @@ DECLARE
     user_record RECORD;
 BEGIN
 
-   -- TODO should we lock down routine by arg names? probably
     FOR user_record IN 
 	SELECT grantor, grantee 
 	FROM information_schema.routine_privileges 
-	WHERE routine_schema  = 'vault' 
-		AND routine_name = 'create_secret' 
+	WHERE specific_name in (
+			SELECT proname || '_' || oid 
+			FROM pg_proc 
+			WHERE proname = 'update_secret' 
+				AND proargnames = '{secret_id,new_secret,new_name,new_description,new_key_id}'
+		)
+		AND routine_schema  = 'vault'
 		AND grantee NOT IN (SELECT rolname FROM pg_roles where rolsuper)
 
     LOOP
 	-- TODO Should this cover 'with grant option'?
-        EXECUTE format('GRANT insert on table vault.secrets %I GRANTED BY %I;', user_record.grantee, user_record.grantor);
+        EXECUTE format('GRANT update on table vault.secrets %I GRANTED BY %I;', user_record.grantee, user_record.grantor);
     END LOOP;
 END $$;
 
@@ -33,12 +37,17 @@ BEGIN
     FOR user_record IN 
 	SELECT grantor, grantee 
 	FROM information_schema.routine_privileges 
-	WHERE routine_schema  = 'vault' 
-		AND routine_name = 'update_secret' 
+	WHERE specific_name in (
+			SELECT proname || '_' || oid 
+			FROM pg_proc 
+			WHERE proname = 'create_secret' 
+				AND proargnames = '{new_secret,new_name,new_description,new_key_id}'
+		)
+		AND routine_schema  = 'vault' 
 		AND grantee NOT IN (SELECT rolname FROM pg_roles where rolsuper)
     LOOP
 	-- TODO Should this cover 'with grant option'?
-        EXECUTE format('GRANT update on table vault.secrets TO %I GRANTED BY %I', user_record.grantee, user_record.grantor);
+        EXECUTE format('GRANT insert on table vault.secrets TO %I GRANTED BY %I', user_record.grantee, user_record.grantor);
 
     END LOOP;
 END $$;
