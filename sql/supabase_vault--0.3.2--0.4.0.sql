@@ -27,7 +27,9 @@ BEGIN
 		AND grantee NOT IN (SELECT rolname FROM pg_roles where rolsuper)
 
     LOOP
-        EXECUTE format('GRANT update on table vault.secrets TO %I %I GRANTED BY %I;', user_record.grantee, user_record.grantable, user_record.grantor);
+        EXECUTE format('SET ROLE %s;', user_record.grantor);
+        EXECUTE format('GRANT update on table vault.secrets TO %s %s GRANTED BY %s;', user_record.grantee, user_record.grantable, user_record.grantor);
+        EXECUTE format('RESET ROLE;');
     END LOOP;
 END $$;
 
@@ -56,7 +58,9 @@ BEGIN
 		AND routine_schema  = 'vault' 
 		AND grantee NOT IN (SELECT rolname FROM pg_roles where rolsuper)
     LOOP
-        EXECUTE format('GRANT insert on table vault.secrets TO %I %I GRANTED BY %I', user_record.grantee, user_record.grantable, user_record.grantor);
+        EXECUTE format('SET ROLE %s;', user_record.grantor);
+        EXECUTE format('GRANT insert on table vault.secrets TO %s %s GRANTED BY %s', user_record.grantee, user_record.grantable, user_record.grantor);
+        EXECUTE format('RESET ROLE;');
 
     END LOOP;
 END $$;
