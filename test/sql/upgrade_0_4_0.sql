@@ -1,0 +1,60 @@
+-- test extension upgrade from 0.3.2 to 0.4.0
+
+-- in particular we are testing the permisions translation from security definer to table based
+-- for permission we test that 6 users that are granted the 2 vault functions in various 
+-- ways (grant option, granted by, normal) and that these permissions are translated during the 
+-- upgrade process to the corresponding table grants.
+
+DROP EXTENSION supabase_vault;
+CREATE EXTENSION supabase_vault WITH VERSION '0.3.2';
+
+\dx+ supabase_vault
+
+CREATE ROLE user_a;
+CREATE ROLE user_b;
+CREATE ROLE user_c;
+
+CREATE ROLE user_d;
+CREATE ROLE user_e;
+CREATE ROLE user_f;
+
+GRANT USAGE on SCHEMA vault to user_a;
+GRANT USAGE on SCHEMA vault to user_b;
+GRANT USAGE on SCHEMA vault to user_c;
+GRANT USAGE on SCHEMA vault to user_d;
+GRANT USAGE on SCHEMA vault to user_e;
+GRANT USAGE on SCHEMA vault to user_f;
+
+GRANT EXECUTE ON FUNCTION vault.update_secret TO user_a WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION vault.update_secret TO user_b;
+
+SET ROLE user_a;
+GRANT EXECUTE ON FUNCTION vault.update_secret TO user_c GRANTED BY user_a;
+RESET ROLE;
+
+GRANT EXECUTE ON FUNCTION vault.create_secret TO user_d WITH GRANT OPTION;
+GRANT EXECUTE ON FUNCTION vault.create_secret TO user_e;
+
+SET ROLE user_d;
+GRANT EXECUTE ON FUNCTION vault.create_secret TO user_f GRANTED BY user_d;
+RESET ROLE;
+
+ALTER EXTENSION supabase_vault UPDATE;
+
+SELECT grantor, grantee, is_grantable
+FROM information_schema.table_privileges
+WHERE grantee in ('user_a', 'user_b', 'user_c', 'user_d', 'user_e', 'user_f');
+
+\dx+ supabase_vault
+
+DROP EXTENSION supabase_vault;
+DROP schema vault;
+
+DROP ROLE user_a;
+DROP ROLE user_b;
+DROP ROLE user_c;
+DROP ROLE user_d;
+DROP ROLE user_e;
+DROP ROLE user_f;
+
+CREATE EXTENSION supabase_vault;
