@@ -1,5 +1,14 @@
+-- test extension upgrade from 0.3.2 to 0.4.0
+
+-- in particular we are testing the permisions translation from security definer to table based
+-- for permission we test that 6 users that are granted the 2 vault functions in various 
+-- ways (grant option, granted by, normal) and that these permissions are translated during the 
+-- upgrade process to the corresponding table grants.
+
 DROP EXTENSION supabase_vault;
 CREATE EXTENSION supabase_vault WITH VERSION '0.3.2';
+
+\dx+ supabase_vault
 
 CREATE ROLE user_a;
 CREATE ROLE user_b;
@@ -35,6 +44,8 @@ ALTER EXTENSION supabase_vault UPDATE;
 SELECT grantor, grantee, is_grantable
 FROM information_schema.table_privileges
 WHERE grantee in ('user_a', 'user_b', 'user_c', 'user_d', 'user_e', 'user_f');
+
+\dx+ supabase_vault
 
 DROP EXTENSION supabase_vault;
 DROP schema vault;
