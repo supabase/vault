@@ -41,7 +41,8 @@ ALTER EXTENSION supabase_vault UPDATE;
 
 SELECT grantor, grantee, is_grantable
 FROM information_schema.table_privileges
-WHERE grantee in ('user_a', 'user_b', 'user_c', 'user_d', 'user_e', 'user_f');
+WHERE grantee in ('user_a', 'user_b', 'user_c', 'user_d', 'user_e', 'user_f')
+ORDER BY grantor, grantee;
 
 DROP EXTENSION supabase_vault;
 DROP schema vault;
