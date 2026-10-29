@@ -8,8 +8,6 @@
 DROP EXTENSION supabase_vault;
 CREATE EXTENSION supabase_vault WITH VERSION '0.3.2';
 
-\dx+ supabase_vault
-
 CREATE ROLE user_a;
 CREATE ROLE user_b;
 CREATE ROLE user_c;
@@ -44,8 +42,6 @@ ALTER EXTENSION supabase_vault UPDATE;
 SELECT grantor, grantee, is_grantable
 FROM information_schema.table_privileges
 WHERE grantee in ('user_a', 'user_b', 'user_c', 'user_d', 'user_e', 'user_f');
-
-\dx+ supabase_vault
 
 DROP EXTENSION supabase_vault;
 DROP schema vault;
