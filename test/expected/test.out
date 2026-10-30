@@ -77,7 +77,7 @@ where name = 'empty_secret';
 SELECT extversion FROM pg_extension where extname = 'supabase_vault';
  extversion 
 ------------
- 0.3.2
+ 1.0.0
 (1 row)
 
 -- Validate that each security definer function explicitly specifies pg_temp and 

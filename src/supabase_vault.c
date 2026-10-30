@@ -1,15 +1,16 @@
 #include <postgres.h>
 
 #include <miscadmin.h>
-#include <sodium.h>
 #include <storage/ipc.h>
 #include <unistd.h>
 #include <utils/builtins.h>
 #include <utils/guc.h>
 
-#include "pgsodium.h"
-
 PG_MODULE_MAGIC;
+char *getkey_script = NULL;
+bytea *secret_key = NULL;
+#define PG_GETKEY_EXEC "getkey"
+
 
 void _PG_init(void);
 
@@ -21,11 +22,6 @@ void _PG_init(void) {
   char *path;
   char sharepath[MAXPGPATH];
 
-  if (sodium_init() == -1) {
-    elog(ERROR,
-         "_PG_init: sodium_init() failed cannot initialize supabase_vault");
-    return;
-  }
 
   // we're done if not preloaded, otherwise try to get internal shared key
   if (!process_shared_preload_libraries_in_progress)
@@ -79,15 +75,21 @@ void _PG_init(void) {
             errmsg("%s: could not close shell command\n", PG_GETKEY_EXEC));
     proc_exit(1);
   }
-  pgsodium_secret_key = sodium_malloc(crypto_sign_SECRETKEYBYTES + VARHDRSZ);
+  secret_key = malloc(32 + VARHDRSZ);
 
-  if (pgsodium_secret_key == NULL) {
-    ereport(ERROR, errmsg("%s: sodium_malloc() failed\n", PG_GETKEY_EXEC));
+  if (secret_key == NULL) {
+    ereport(ERROR, errmsg("%s: palloc() failed\n", PG_GETKEY_EXEC));
     proc_exit(1);
   }
 
-  hex_decode(secret_buf, secret_len, VARDATA(pgsodium_secret_key));
-  sodium_memzero(secret_buf, secret_len);
+  hex_decode(secret_buf, secret_len, VARDATA(secret_key));
+  SET_VARSIZE(secret_key, 32 + VARHDRSZ); /* actual length */
+
   free(secret_buf);
   elog(LOG, "vault primary server secret key loaded");
+}
+
+PG_FUNCTION_INFO_V1(_get_secret_key);
+Datum _get_secret_key(PG_FUNCTION_ARGS) {
+  PG_RETURN_BYTEA_P(secret_key);
 }
