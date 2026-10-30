@@ -10,27 +10,8 @@ on:
       - main
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        pg-version: [ '14', '15', '16', '17', '18', '19']
-
-    steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
-      with:
-        nix_path: nixpkgs=channel:nixos-unstable
-
-    - name: Use Cachix Cache
-      uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
-      with:
-        name: nxpg
-        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-
-    - name: Run tests
-      run: nix-shell --argstr pgVersion "${{ matrix.pg-version }}" --arg cassert false --run "xpg -v ${{ matrix.pg-version }} test"
+  common-extension-workflows:
+    uses: supabase/xpg/.github/workflows/reusable_extension_ci.yml@e8a7bc1593b9ae293b9c72e1659f5b93795390f6
 
   style:
 
@@ -52,41 +33,6 @@ jobs:
 
       - name: Run style check
         run: nix-shell --run "vault-style-check"
-
-  test-on-macos:
-    runs-on: macos-26
-
-    strategy:
-      matrix:
-        pg-version: ['17', '18', '19']
-
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: install nix
-        uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe # v31.10.3
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - name: use cachix cache
-        uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
-        with:
-          name: nxpg
-          authtoken: ${{ secrets.cachix_auth_token }}
-
-      - name: clang analyze
-        run: |
-          nix-shell --run "CPPFLAGS='--analyze -Xanalyzer  -analyzer-werror' xpg --cassert -v ${{ matrix.pg-version }} build"
-          rm -rf ./build-${{ matrix.pg-version }}
-
-      - name: build
-        run: nix-shell --run "xpg --cassert -v ${{ matrix.pg-version }} build"
-
-      - name: run tests
-        run: nix-shell --run "xpg --cassert -v ${{ matrix.pg-version }} test"
-
-      - if: ${{ failure() }}
-        run: cat regression.diffs
 
   validate-sql-snapshot:
     runs-on: macos-15
