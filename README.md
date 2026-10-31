@@ -27,26 +27,10 @@ The Vault extension is enabled by default. If you install the Vault
 yourself locally, from SQL you can do:
 
 ```
-CREATE EXTENSION supabase_vault CASCADE;
+CREATE EXTENSION supabase_vault;
 ```
 
 ## Using the Vault
-
-Using the vault is as simple as `INSERT`ing data into the
-`vault.secret` table.
-
-```
-postgres=> INSERT INTO vault.secrets (secret) VALUES ('s3kre3t_k3y') RETURNING *;
--[ RECORD 1 ]-------------------------------------------------------------
-id          | d91596b8-1047-446c-b9c0-66d98af6d001
-name        | 
-description | 
-secret      | S02eXS9BBY+kE3r621IS8beAytEEtj+dDHjs9/0AoMy7HTbog+ylxcS22A==
-key_id      | 7f5ad44b-6bd5-4c99-9f68-4b6c7486f927
-nonce       | \x3aa2e92f9808e496aa4163a59304b895
-created_at  | 2022-12-14 02:29:21.3625+00
-updated_at  | 2022-12-14 02:29:21.3625+00
-```
 
 There is also a handy function for creating secrets called
 `vault.create_secret()`:
@@ -174,7 +158,7 @@ encrypted column data, because the statement logs will contain the
 you *must* turn off statement logging.
 
 ```
-ALTER SYSTEM SET statement_log = 'none';
+ALTER SYSTEM SET log_statement = 'none';
 ```
 
 And then restart your project from the dashboard to enable that
