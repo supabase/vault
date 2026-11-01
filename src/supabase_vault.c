@@ -7,8 +7,8 @@
 #include <utils/guc.h>
 
 PG_MODULE_MAGIC;
-char *getkey_script = NULL;
-bytea *secret_key = NULL;
+static char *getkey_script = NULL;
+static bytea *secret_key = NULL;
 #define PG_GETKEY_EXEC "getkey"
 
 
