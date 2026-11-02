@@ -54,14 +54,6 @@ BEGIN
 	new_secret,
 	  vault._get_secret_key()::text
   ), 'base64') END,
-
-                  -- ELSE encode(vault._crypto_aead_det_encrypt(
-                  --   message := convert_to(new_secret, 'utf8'),
-                  --   additional := convert_to(s.id::text, 'utf8'),
-                  --   key_id := 0,
-                  --   context := 'pgsodium'::bytea,
-                  --   nonce := s.nonce
-                  -- ), 'base64') END,
     name = coalesce(new_name, s.name),
     description = coalesce(new_description, s.description),
     updated_at = now()
