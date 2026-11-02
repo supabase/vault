@@ -72,7 +72,6 @@ pkgs.mkShell {
         ];
       };
     })
-    pkgs.libsodium
     pkgs.python313Packages.pglast
     style
     styleCheck
