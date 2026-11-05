@@ -13,12 +13,15 @@ PG_MODULE_MAGIC;
 
 void _PG_init(void);
 
+// The GUC machinery keeps a pointer to the boot value, so it must outlive
+// PostmasterContext, which backends delete after fork.
+static char getkey_script_default[MAXPGPATH];
+
 void _PG_init(void) {
   FILE *fp;
   char *secret_buf = NULL;
   size_t secret_len = 0;
   size_t char_read;
-  char *path;
   char sharepath[MAXPGPATH];
 
   if (sodium_init() == -1) {
@@ -31,13 +34,14 @@ void _PG_init(void) {
   if (!process_shared_preload_libraries_in_progress)
     return;
 
-  path = (char *)palloc0(MAXPGPATH);
   get_share_path(my_exec_path, sharepath);
-  snprintf(path, MAXPGPATH, "%s/extension/%s", sharepath, PG_GETKEY_EXEC);
+  snprintf(getkey_script_default, MAXPGPATH, "%s/extension/%s", sharepath,
+           PG_GETKEY_EXEC);
 
-  DefineCustomStringVariable(
-      "vault.getkey_script", "path to script that returns vault root key", NULL,
-      &getkey_script, path, PGC_POSTMASTER, 0, NULL, NULL, NULL);
+  DefineCustomStringVariable("vault.getkey_script",
+                             "path to script that returns vault root key", NULL,
+                             &getkey_script, getkey_script_default,
+                             PGC_POSTMASTER, 0, NULL, NULL, NULL);
 
   if (access(getkey_script, X_OK) == -1) {
     if (errno == ENOENT)
