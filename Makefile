@@ -29,7 +29,7 @@ else
 endif
 
 EXTENSION = supabase_vault
-EXTVERSION = 0.3.2
+EXTVERSION = 1.0.0
 
 DATA = $(wildcard sql/*--*.sql)
 
@@ -48,8 +48,6 @@ OBJS = $(patsubst src/%.c, $(BUILD_DIR)/%.o, $(SOURCES))
 else
 OBJS = $(patsubst src/%.c, src/%.o, $(SOURCES)) # if no BUILD_DIR, just build on src so standard PGXS `make` works
 endif
-
-SHLIB_LINK = -lsodium
 
 # Find <curl/curl.h> from system headers
 PG_CPPFLAGS := $(CPPFLAGS) -DEXTVERSION=\"$(EXTVERSION)\"

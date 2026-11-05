@@ -2,34 +2,12 @@ CREATE SCHEMA vault;
 
 ALTER SCHEMA vault OWNER TO postgres;
 
-CREATE FUNCTION vault._crypto_aead_det_decrypt(message bytea
-                                             , additional bytea
-                                             , key_id bigint
-                                             , context bytea = CAST('\x7067736f6469756d' AS bytea)
-                                             , nonce bytea = CAST(NULL AS bytea))
+CREATE FUNCTION vault._get_secret_key()
 RETURNS bytea
 LANGUAGE c IMMUTABLE AS '$libdir/supabase_vault'
-                      , 'pgsodium_crypto_aead_det_decrypt_by_id';
+                      , '_get_secret_key';
 
-ALTER FUNCTION vault._crypto_aead_det_decrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) OWNER TO postgres;
-
-CREATE FUNCTION vault._crypto_aead_det_encrypt(message bytea
-                                             , additional bytea
-                                             , key_id bigint
-                                             , context bytea = CAST('\x7067736f6469756d' AS bytea)
-                                             , nonce bytea = CAST(NULL AS bytea))
-RETURNS bytea
-LANGUAGE c IMMUTABLE AS '$libdir/supabase_vault'
-                      , 'pgsodium_crypto_aead_det_encrypt_by_id';
-
-ALTER FUNCTION vault._crypto_aead_det_encrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea) OWNER TO postgres;
-
-CREATE FUNCTION vault._crypto_aead_det_noncegen()
-RETURNS bytea
-LANGUAGE c IMMUTABLE AS '$libdir/supabase_vault'
-                      , 'pgsodium_crypto_aead_det_noncegen';
-
-ALTER FUNCTION vault._crypto_aead_det_noncegen () OWNER TO postgres;
+ALTER FUNCTION vault._get_secret_key () OWNER TO postgres;
 
 CREATE FUNCTION vault.create_secret(new_secret text
                                   , new_name text = CAST(NULL AS text)
@@ -49,12 +27,9 @@ BEGIN
   )
   RETURNING * INTO rec;
   UPDATE vault.secrets s
-  SET secret = encode(vault._crypto_aead_det_encrypt(
-    message := convert_to(rec.secret, 'utf8'),
-    additional := convert_to(s.id::text, 'utf8'),
-    key_id := 0,
-    context := 'pgsodium'::bytea,
-    nonce := rec.nonce
+  SET secret = encode(public.pgp_sym_encrypt(
+	rec.secret,
+	  vault._get_secret_key()::text
   ), 'base64')
   WHERE id = rec.id;
   RETURN rec.id;
@@ -75,13 +50,10 @@ BEGIN
   UPDATE vault.secrets s
   SET
     secret = CASE WHEN new_secret IS NULL THEN s.secret
-                  ELSE encode(vault._crypto_aead_det_encrypt(
-                    message := convert_to(new_secret, 'utf8'),
-                    additional := convert_to(s.id::text, 'utf8'),
-                    key_id := 0,
-                    context := 'pgsodium'::bytea,
-                    nonce := s.nonce
-                  ), 'base64') END,
+  ELSE encode(public.pgp_sym_encrypt(
+	new_secret,
+	  vault._get_secret_key()::text
+  ), 'base64') END,
     name = coalesce(new_name, s.name),
     description = coalesce(new_description, s.description),
     updated_at = now()
@@ -97,21 +69,13 @@ GRANT USAGE
   WITH GRANT OPTION;
 
 REVOKE ALL PRIVILEGES
-  ON FUNCTION vault._crypto_aead_det_decrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea)
+  ON FUNCTION vault._get_secret_key ()
   FROM PUBLIC;
 
 GRANT ALL PRIVILEGES
-  ON FUNCTION vault._crypto_aead_det_decrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea)
+  ON FUNCTION vault._get_secret_key ()
   TO bob
   WITH GRANT OPTION;
-
-REVOKE ALL PRIVILEGES
-  ON FUNCTION vault._crypto_aead_det_encrypt (message bytea, additional bytea, key_id bigint, context bytea, nonce bytea)
-  FROM PUBLIC;
-
-REVOKE ALL PRIVILEGES
-  ON FUNCTION vault._crypto_aead_det_noncegen ()
-  FROM PUBLIC;
 
 REVOKE ALL PRIVILEGES
   ON FUNCTION vault.create_secret (new_secret text, new_name text, new_description text, new_key_id uuid)
