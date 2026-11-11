@@ -49,14 +49,14 @@ BEGIN
   )
   RETURNING * INTO rec;
   UPDATE vault.secrets s
-  SET secret = encode(vault._crypto_aead_det_encrypt(
-    message := convert_to(rec.secret, 'utf8'),
-    additional := convert_to(s.id::text, 'utf8'),
+  SET secret = pg_catalog.encode(vault._crypto_aead_det_encrypt(
+    message := pg_catalog.convert_to(rec.secret, 'utf8'),
+    additional := pg_catalog.convert_to(s.id::pg_catalog.text, 'utf8'),
     key_id := 0,
-    context := 'pgsodium'::bytea,
+    context := 'pgsodium'::pg_catalog.bytea,
     nonce := rec.nonce
   ), 'base64')
-  WHERE id = rec.id;
+  WHERE s.id OPERATOR(pg_catalog.=) rec.id;
   RETURN rec.id;
 END
 $$;
@@ -75,17 +75,17 @@ BEGIN
   UPDATE vault.secrets s
   SET
     secret = CASE WHEN new_secret IS NULL THEN s.secret
-                  ELSE encode(vault._crypto_aead_det_encrypt(
-                    message := convert_to(new_secret, 'utf8'),
-                    additional := convert_to(s.id::text, 'utf8'),
+                  ELSE pg_catalog.encode(vault._crypto_aead_det_encrypt(
+                    message := pg_catalog.convert_to(new_secret, 'utf8'),
+                    additional := pg_catalog.convert_to(s.id::pg_catalog.text, 'utf8'),
                     key_id := 0,
-                    context := 'pgsodium'::bytea,
+                    context := 'pgsodium'::pg_catalog.bytea,
                     nonce := s.nonce
                   ), 'base64') END,
     name = coalesce(new_name, s.name),
     description = coalesce(new_description, s.description),
-    updated_at = now()
-  WHERE s.id = secret_id;
+    updated_at = pg_catalog.now()
+  WHERE s.id OPERATOR(pg_catalog.=) secret_id;
 END
 $$;
 
