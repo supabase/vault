@@ -5,7 +5,7 @@
     # 2025-11-13
     nixpkgs.url = "github:NixOS/nixpkgs/91c9a64ce2a84e648d0cf9671274bb9c2fb9ba60";
     xpg = {
-      url = "github:supabase/xpg/b116ad283cf88b92f883ad71690053d762b41261";
+      url = "github:supabase/xpg/v2.7.1";
     };
   };
 
