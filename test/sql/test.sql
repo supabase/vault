@@ -115,7 +115,8 @@ FROM
         plpgsql_check_function_tb(pg_proc.oid, COALESCE(pg_trigger.tgrelid, 0),
                                   oldtable=>pg_trigger.tgoldtable,
                                   newtable=>pg_trigger.tgnewtable,
-				  security_warnings=>TRUE) AS pcf
+				  security_warnings=>TRUE,
+			          extra_security_warnings_level=>4) AS pcf
     FROM pg_proc
     LEFT JOIN pg_trigger
         ON (pg_trigger.tgfoid = pg_proc.oid)

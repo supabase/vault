@@ -52,8 +52,8 @@
       },
       "original": {
         "owner": "supabase",
+        "ref": "v2.7.1",
         "repo": "xpg",
-        "rev": "b116ad283cf88b92f883ad71690053d762b41261",
         "type": "github"
       }
     }
