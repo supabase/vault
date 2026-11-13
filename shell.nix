@@ -19,6 +19,25 @@ in
   cassert ? true,
 }:
 let
+  pgsodium14 = pkgs.callPackage ./nix/pgsodium.nix {
+    postgresql = xpgPkgs.postgresql_14;
+  };
+  pgsodium15 = pkgs.callPackage ./nix/pgsodium.nix {
+    postgresql = xpgPkgs.postgresql_15;
+  };
+  pgsodium16 = pkgs.callPackage ./nix/pgsodium.nix {
+    postgresql = xpgPkgs.postgresql_16;
+  };
+  pgsodium17 = pkgs.callPackage ./nix/pgsodium.nix {
+    postgresql = xpgPkgs.postgresql_17;
+  };
+  pgsodium18 = pkgs.callPackage ./nix/pgsodium.nix {
+    postgresql = xpgPkgs.postgresql_18;
+  };
+  pgsodium19 = pkgs.callPackage ./nix/pgsodium.nix {
+    postgresql = xpgPkgs.postgresql_19;
+  };
+
   plpgsqlcheck14 = pkgs.callPackage ./nix/plpgsql-check.nix {
     postgresql = xpgPkgs.postgresql_14;
   };
@@ -54,21 +73,27 @@ pkgs.mkShell {
       extensions = {
         "14" = [
           plpgsqlcheck14
+          pgsodium14
         ];
         "15" = [
           plpgsqlcheck15
+          pgsodium15
         ];
         "16" = [
           plpgsqlcheck16
+          pgsodium16
         ];
         "17" = [
           plpgsqlcheck17
+          pgsodium17
         ];
         "18" = [
           plpgsqlcheck18
+          pgsodium18
         ];
         "19" = [
           plpgsqlcheck19
+          pgsodium19
         ];
       };
     })
