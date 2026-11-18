@@ -9,7 +9,11 @@
 
 #include "pgsodium.h"
 
+#ifdef PG_MODULE_MAGIC_EXT
+PG_MODULE_MAGIC_EXT(.name = "supabase_vault", .version = EXTVERSION);
+#else
 PG_MODULE_MAGIC;
+#endif
 
 void _PG_init(void);
 

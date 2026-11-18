@@ -35,7 +35,18 @@ DATA = $(wildcard sql/*--*.sql)
 
 EXTRA_CLEAN = $(EXTENSION).control
 
+
+PG_VERSION = $(strip $(shell $(PG_CONFIG) --version | $(GREP) -oP '(?<=PostgreSQL )[0-9]+'))
+PG_EQ18 = $(shell test $(PG_VERSION) -eq 18; echo $$?)
+
 TESTS = $(wildcard test/sql/*.sql)
+
+ifneq ($(PG_GE18), 0)
+TESTS := $(filter-out test/sql/ge18_%.sql, $(TESTS))
+else
+TESTS := $(filter-out test/sql/lt18_%.sql, $(TESTS))
+endif
+
 REGRESS = $(patsubst test/sql/%.sql,%,$(TESTS))
 REGRESS_OPTS = --use-existing --inputdir=test
 
