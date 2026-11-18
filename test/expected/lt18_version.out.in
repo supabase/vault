@@ -1,0 +1,17 @@
+-- Validate correct lib version shows
+SHOW vault.version;
+ vault.version 
+---------------
+ 0.3.3
+(1 row)
+
+-- Validate that user is not able to change version
+SET vault.version to 'v0.0.0';
+ERROR:  parameter "vault.version" cannot be changed
+-- Validate the paramter doesnt show up on pg_settings for pg versions that dont have pg_catalog.pg_get_loaded_modules() function
+SELECT name FROM pg_settings WHERE name = 'vault.version';
+     name      
+---------------
+ vault.version
+(1 row)
+

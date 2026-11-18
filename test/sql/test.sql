@@ -2,12 +2,6 @@
 SELECT boot_val LIKE '%/extension/pgsodium_getkey' AS boot_val_ok
 FROM pg_settings WHERE name = 'vault.getkey_script';
 
--- Validate correct lib version shows
-SHOW vault.version;
-
--- Validate that user is not able to change version
-SET supautils.version to 'v0.0.0';
-
 do $$
 begin
   perform vault.create_secret('s3kr3t_k3y', 'a_name', 'this is the foo secret key');

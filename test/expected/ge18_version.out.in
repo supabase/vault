@@ -1,0 +1,22 @@
+-- Validate correct lib version shows
+SHOW vault.version;
+ vault.version 
+---------------
+ @MODVERSION@
+(1 row)
+
+-- Validate that user is not able to change version
+SET vault.version to 'v0.0.0';
+ERROR:  parameter "vault.version" cannot be changed
+SELECT * FROM pg_catalog.pg_get_loaded_modules();
+  module_name   | version |      file_name       
+----------------+---------+----------------------
+ supabase_vault | @MODVERSION@   | supabase_vault.dylib
+(1 row)
+
+-- Validate the deprecated parameter doesnt show up on pg_settings
+SELECT name FROM pg_settings WHERE name = 'vault.version';
+ name 
+------
+(0 rows)
+

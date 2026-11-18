@@ -1,5 +1,8 @@
 # the `-Wno`s quiet C90 warnings
 PG_CFLAGS = -std=c11 -Werror -Wno-declaration-after-statement
+
+GREP ?= grep
+
 ifeq ($(COVERAGE), 1)
 PG_CFLAGS += --coverage
 endif
@@ -30,21 +33,22 @@ endif
 
 EXTENSION = supabase_vault
 EXTVERSION = 0.3.3
+MODVERSION = 0.3.3
 
 DATA = $(wildcard sql/*--*.sql)
 
-EXTRA_CLEAN = $(EXTENSION).control
-
+GENERATED_OUT = test/expected/ge18_version.out test/expected/lt18_version.out
+EXTRA_CLEAN = $(EXTENSION).control $(GENERATED_OUT)
 
 PG_VERSION = $(strip $(shell $(PG_CONFIG) --version | $(GREP) -oP '(?<=PostgreSQL )[0-9]+'))
-PG_EQ18 = $(shell test $(PG_VERSION) -eq 18; echo $$?)
+PG_GE18 = $(shell test $(PG_VERSION) -ge 18; echo $$?)
 
 TESTS = $(wildcard test/sql/*.sql)
 
-ifneq ($(PG_GE18), 0)
-TESTS := $(filter-out test/sql/ge18_%.sql, $(TESTS))
-else
+ifeq ($(PG_GE18), 0)
 TESTS := $(filter-out test/sql/lt18_%.sql, $(TESTS))
+else
+TESTS := $(filter-out test/sql/ge18_%.sql, $(TESTS))
 endif
 
 REGRESS = $(patsubst test/sql/%.sql,%,$(TESTS))
@@ -63,7 +67,7 @@ endif
 SHLIB_LINK = -lsodium
 
 # Find <curl/curl.h> from system headers
-PG_CPPFLAGS := $(CPPFLAGS) -DEXTVERSION=\"$(EXTVERSION)\"
+PG_CPPFLAGS := $(CPPFLAGS) -DEXTVERSION=\"$(EXTVERSION)\" -DMODVERSION=\"$(MODVERSION)\"
 
 all: $(EXTENSION).control
 
@@ -91,6 +95,12 @@ include $(PGXS)
 test-startup:
 	bash test/fixtures.sh
 
+test/expected/%_version.out: test/expected/%_version.out.in
+	sed \
+		-e 's/@MODVERSION@/$(MODVERSION)/' \
+		$? > $@
+
+
 .PHONY: test
-test:
+test: $(GENERATED_OUT)
 	make installcheck

@@ -6,15 +6,6 @@ FROM pg_settings WHERE name = 'vault.getkey_script';
  t
 (1 row)
 
--- Validate correct lib version shows
-SHOW vault.version;
- vault.version 
----------------
- 0.3.3
-(1 row)
-
--- Validate that user is not able to change version
-SET supautils.version to 'v0.0.0';
 do $$
 begin
   perform vault.create_secret('s3kr3t_k3y', 'a_name', 'this is the foo secret key');
