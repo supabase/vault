@@ -16,6 +16,7 @@ void _PG_init(void);
 // The GUC machinery keeps a pointer to the boot value, so it must outlive
 // PostmasterContext, which backends delete after fork.
 static char getkey_script_default[MAXPGPATH];
+static char *vault_version                = NULL;
 
 void _PG_init(void) {
   FILE *fp;
@@ -42,6 +43,16 @@ void _PG_init(void) {
                              "path to script that returns vault root key", NULL,
                              &getkey_script, getkey_script_default,
                              PGC_POSTMASTER, 0, NULL, NULL, NULL);
+#if PG_VERSION_NUM >= 180000
+  DefineCustomStringVariable(
+      "vault.version", "DEPRECATED: version of the supabase_vault lib", NULL,
+      &vault_version, EXTVERSION, PGC_INTERNAL,
+      GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE, NULL, NULL, NULL);
+#else
+  DefineCustomStringVariable(
+      "vault.version", "version of the supabase_vault lib", NULL,
+      &vault_version, EXTVERSION, PGC_INTERNAL, 0, NULL, NULL, NULL);
+#endif
 
   if (access(getkey_script, X_OK) == -1) {
     if (errno == ENOENT)

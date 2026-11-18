@@ -2,6 +2,7 @@
 SELECT boot_val LIKE '%/extension/pgsodium_getkey' AS boot_val_ok
 FROM pg_settings WHERE name = 'vault.getkey_script';
 
+SHOW vault.version;
 
 do $$
 begin
