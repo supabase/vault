@@ -2,7 +2,6 @@
 SELECT boot_val LIKE '%/extension/pgsodium_getkey' AS boot_val_ok
 FROM pg_settings WHERE name = 'vault.getkey_script';
 
-
 do $$
 begin
   perform vault.create_secret('s3kr3t_k3y', 'a_name', 'this is the foo secret key');

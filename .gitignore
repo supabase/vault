@@ -5,3 +5,5 @@ regression.*
 *.bc
 *.dylib
 supabase_vault.control
+test/expected/ge18_version.out
+test/expected/lt18_version.out
