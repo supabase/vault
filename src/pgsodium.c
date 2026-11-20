@@ -129,7 +129,7 @@ Datum pgsodium_crypto_aead_det_decrypt_by_id(PG_FUNCTION_ARGS) {
 	      nonce != NULL ? PGSODIUM_UCHARDATA_ANY(nonce) : NULL,
 	      PGSODIUM_UCHARDATA_ANY(key));
   else if (strcmp(cipher, "x-chacha-20") == 0) 
-	  success = crypto_aead_det_xchacha20_encrypt(
+	  success = crypto_aead_det_xchacha20_decrypt(
 	      PGSODIUM_UCHARDATA(result), PGSODIUM_UCHARDATA_ANY(ciphertext),
 	      VARSIZE_ANY_EXHDR(ciphertext),
 	      associated != NULL ? PGSODIUM_UCHARDATA_ANY(associated) : NULL,
