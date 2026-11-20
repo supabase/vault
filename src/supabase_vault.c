@@ -7,6 +7,9 @@
 #include <utils/builtins.h>
 #include <utils/guc.h>
 
+#if PG_VERSION_NUM >= 180000
+#include "vault_pg_stats.h"
+#endif
 #include "pgsodium.h"
 
 PG_MODULE_MAGIC;
@@ -42,6 +45,10 @@ void _PG_init(void) {
                              "path to script that returns vault root key", NULL,
                              &getkey_script, getkey_script_default,
                              PGC_POSTMASTER, 0, NULL, NULL, NULL);
+
+#if PG_VERSION_NUM >= 180000
+  vault_register_stats();
+#endif
 
   if (access(getkey_script, X_OK) == -1) {
     if (errno == ENOENT)

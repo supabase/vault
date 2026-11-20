@@ -57,6 +57,9 @@ Datum pgsodium_crypto_aead_det_encrypt_by_id(PG_FUNCTION_ARGS) {
       nonce != NULL ? PGSODIUM_UCHARDATA_ANY(nonce) : NULL,
       PGSODIUM_UCHARDATA_ANY(key));
   ERRORIF(success != 0, "%s: failed");
+#if PG_VERSION_NUM >= 180000
+  stats_vault_encryption_update();
+#endif
   PG_RETURN_BYTEA_P(result);
 }
 
@@ -107,6 +110,9 @@ Datum pgsodium_crypto_aead_det_decrypt_by_id(PG_FUNCTION_ARGS) {
       nonce != NULL ? PGSODIUM_UCHARDATA_ANY(nonce) : NULL,
       PGSODIUM_UCHARDATA_ANY(key));
   ERRORIF(success != 0, "%s: invalid ciphertext");
+#if PG_VERSION_NUM >= 180000
+  stats_vault_decryption_update();
+#endif
   PG_RETURN_BYTEA_P(result);
 }
 

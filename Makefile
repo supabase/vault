@@ -1,8 +1,10 @@
+GREP ?= grep
 # the `-Wno`s quiet C90 warnings
 PG_CFLAGS = -std=c11 -Werror -Wno-declaration-after-statement
 ifeq ($(COVERAGE), 1)
 PG_CFLAGS += --coverage
 endif
+
 
 ifeq ($(CC),gcc)
   GCC_MAJ := $(firstword $(subst ., ,$(shell $(CC) -dumpfullversion -dumpversion)))
@@ -29,13 +31,23 @@ else
 endif
 
 EXTENSION = supabase_vault
-EXTVERSION = 0.3.3
+EXTVERSION = 0.4.0
 
 DATA = $(wildcard sql/*--*.sql)
 
 EXTRA_CLEAN = $(EXTENSION).control
 
+PG_VERSION = $(strip $(shell $(PG_CONFIG) --version | $(GREP) -oP '(?<=PostgreSQL )[0-9]+'))
+PG_GE18 = $(shell test $(PG_VERSION) -ge 18; echo $$?)
+
 TESTS = $(wildcard test/sql/*.sql)
+
+ifneq ($(PG_GE18), 0)
+TESTS := $(filter-out test/sql/ge18_%.sql, $(TESTS))
+else
+TESTS := $(filter-out test/sql/lt18_%.sql, $(TESTS))
+endif
+
 REGRESS = $(patsubst test/sql/%.sql,%,$(TESTS))
 REGRESS_OPTS = --use-existing --inputdir=test
 
