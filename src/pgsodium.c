@@ -1,10 +1,13 @@
 #include <postgres.h>
+#include "utils/builtins.h"
 
 #include <fmgr.h>
 #include <sodium.h>
 
 #include "crypto_aead_det_xchacha20.h"
+#include "crypto_aead_aes_256_gcm.h"
 #include "pgsodium.h"
+#include "fmgr.h"
 
 bytea *pgsodium_secret_key = NULL;
 char *getkey_script = NULL;
@@ -37,19 +40,19 @@ Datum pgsodium_crypto_aead_det_encrypt_by_id(PG_FUNCTION_ARGS) {
 
   if (!PG_ARGISNULL(4)) {
     nonce = PG_GETARG_BYTEA_PP(4);
-    ERRORIF(VARSIZE_ANY_EXHDR(nonce) != crypto_aead_det_xchacha20_NONCEBYTES,
+    ERRORIF(VARSIZE_ANY_EXHDR(nonce) != crypto_aead_aes256gcm_NPUBBYTES,
             "%s: invalid nonce");
   } else {
     nonce = NULL;
   }
 
-  result_size = VARSIZE_ANY_EXHDR(message) + crypto_aead_det_xchacha20_ABYTES;
+  result_size = VARSIZE_ANY_EXHDR(message) + crypto_aead_aes256gcm_ABYTES;
   result = _pgsodium_zalloc_bytea(result_size + VARHDRSZ);
 
-  key = pgsodium_derive_helper(key_id, crypto_aead_det_xchacha20_KEYBYTES,
+  key = pgsodium_derive_helper(key_id, crypto_aead_aes256gcm_KEYBYTES,
                                context);
 
-  success = crypto_aead_det_xchacha20_encrypt(
+  success = crypto_aead_aes_256_gcm_encrypt(
       PGSODIUM_UCHARDATA(result), PGSODIUM_UCHARDATA_ANY(message),
       VARSIZE_ANY_EXHDR(message),
       associated != NULL ? PGSODIUM_UCHARDATA_ANY(associated) : NULL,
@@ -69,10 +72,15 @@ Datum pgsodium_crypto_aead_det_decrypt_by_id(PG_FUNCTION_ARGS) {
   size_t result_len;
   bytea *key, *result, *nonce;
   int success;
+  char* cipher = NULL;
+  int crypto_aead_npubbytes;
+  int crypto_aead_abytes;
+  int crypto_aead_keybytes;
 
   ERRORIF(PG_ARGISNULL(0), "%s: message cannot be NULL");
   ERRORIF(PG_ARGISNULL(2), "%s: key id cannot be NULL");
   ERRORIF(PG_ARGISNULL(3), "%s: key context cannot be NULL");
+  ERRORIF(PG_ARGISNULL(5), "%s: cipher cannot be NULL");
 
   ciphertext = PG_GETARG_BYTEA_PP(0);
 
@@ -84,36 +92,62 @@ Datum pgsodium_crypto_aead_det_decrypt_by_id(PG_FUNCTION_ARGS) {
 
   key_id = PG_GETARG_INT64(2);
   context = PG_GETARG_BYTEA_PP(3);
+  cipher = DatumGetCString(DirectFunctionCall1(enum_out, PG_GETARG_DATUM(5)));
+
+  if (strcmp(cipher, "aes-256-gcm") == 0) {
+	  crypto_aead_npubbytes = crypto_aead_aes256gcm_NPUBBYTES;
+	  crypto_aead_abytes = crypto_aead_aes256gcm_ABYTES;
+	  crypto_aead_keybytes = crypto_aead_aes256gcm_KEYBYTES;
+  } else if (strcmp(cipher, "x-chacha-20") == 0) {
+	  crypto_aead_npubbytes = crypto_aead_det_xchacha20_NONCEBYTES;
+	  crypto_aead_abytes = crypto_aead_det_xchacha20_ABYTES ;
+	  crypto_aead_keybytes = crypto_aead_det_xchacha20_KEYBYTES;
+  } else {
+	  ERRORIF(1, "%s: invalid cipher");
+  }
 
   if (!PG_ARGISNULL(4)) {
     nonce = PG_GETARG_BYTEA_PP(4);
-    ERRORIF(VARSIZE_ANY_EXHDR(nonce) != crypto_aead_det_xchacha20_NONCEBYTES,
+    ERRORIF(VARSIZE_ANY_EXHDR(nonce) != crypto_aead_npubbytes,
             "%s: invalid nonce");
   } else {
     nonce = NULL;
   }
-  ERRORIF(VARSIZE_ANY_EXHDR(ciphertext) < crypto_aead_det_xchacha20_ABYTES,
+  ERRORIF(VARSIZE_ANY_EXHDR(ciphertext) < crypto_aead_abytes,
           "%s: invalid message");
-  result_len = VARSIZE_ANY_EXHDR(ciphertext) - crypto_aead_det_xchacha20_ABYTES;
+  result_len = VARSIZE_ANY_EXHDR(ciphertext) - crypto_aead_abytes;
   result = _pgsodium_zalloc_bytea(result_len + VARHDRSZ);
-  key = pgsodium_derive_helper(key_id, crypto_aead_det_xchacha20_KEYBYTES,
+  key = pgsodium_derive_helper(key_id, crypto_aead_keybytes,
                                context);
 
-  success = crypto_aead_det_xchacha20_decrypt(
-      PGSODIUM_UCHARDATA(result), PGSODIUM_UCHARDATA_ANY(ciphertext),
-      VARSIZE_ANY_EXHDR(ciphertext),
-      associated != NULL ? PGSODIUM_UCHARDATA_ANY(associated) : NULL,
-      associated != NULL ? VARSIZE_ANY_EXHDR(associated) : 0,
-      nonce != NULL ? PGSODIUM_UCHARDATA_ANY(nonce) : NULL,
-      PGSODIUM_UCHARDATA_ANY(key));
+  if (strcmp(cipher, "aes-256-gcm") == 0)
+	  success = crypto_aead_aes_256_gcm_decrypt(
+	      PGSODIUM_UCHARDATA(result), PGSODIUM_UCHARDATA_ANY(ciphertext),
+	      VARSIZE_ANY_EXHDR(ciphertext),
+	      associated != NULL ? PGSODIUM_UCHARDATA_ANY(associated) : NULL,
+	      associated != NULL ? VARSIZE_ANY_EXHDR(associated) : 0,
+	      nonce != NULL ? PGSODIUM_UCHARDATA_ANY(nonce) : NULL,
+	      PGSODIUM_UCHARDATA_ANY(key));
+  else if (strcmp(cipher, "x-chacha-20") == 0) 
+	  success = crypto_aead_det_xchacha20_decrypt(
+	      PGSODIUM_UCHARDATA(result), PGSODIUM_UCHARDATA_ANY(ciphertext),
+	      VARSIZE_ANY_EXHDR(ciphertext),
+	      associated != NULL ? PGSODIUM_UCHARDATA_ANY(associated) : NULL,
+	      associated != NULL ? VARSIZE_ANY_EXHDR(associated) : 0,
+	      nonce != NULL ? PGSODIUM_UCHARDATA_ANY(nonce) : NULL,
+	      PGSODIUM_UCHARDATA_ANY(key));
+  else 
+	  ERRORIF(1, "%s: invalid cipher");
+
+
   ERRORIF(success != 0, "%s: invalid ciphertext");
   PG_RETURN_BYTEA_P(result);
 }
 
 PG_FUNCTION_INFO_V1(pgsodium_crypto_aead_det_noncegen);
 Datum pgsodium_crypto_aead_det_noncegen(PG_FUNCTION_ARGS) {
-  int result_size = VARHDRSZ + crypto_aead_det_xchacha20_NONCEBYTES;
+  int result_size = VARHDRSZ + crypto_aead_aes256gcm_NPUBBYTES;
   bytea *result = _pgsodium_zalloc_bytea(result_size);
-  randombytes_buf(VARDATA(result), crypto_aead_det_xchacha20_NONCEBYTES);
+  randombytes_buf(VARDATA(result), crypto_aead_aes256gcm_NPUBBYTES);
   PG_RETURN_BYTEA_P(result);
 }
