@@ -63,6 +63,22 @@ $$;
 
 ALTER FUNCTION vault.create_secret (new_secret text, new_name text, new_description text, new_key_id uuid) OWNER TO postgres;
 
+CREATE FUNCTION vault.pg_stat_vault(OUT encryption_count bigint
+                                  , OUT decryption_count bigint
+                                  , OUT stats_reset timestamp with time zone)
+RETURNS record
+LANGUAGE c RETURNS NULL ON NULL INPUT AS '$libdir/supabase_vault'
+                                       , 'pg_stat_vault';
+
+ALTER FUNCTION vault.pg_stat_vault (OUT encryption_count bigint, OUT decryption_count bigint, OUT stats_reset timestamp with time zone) OWNER TO postgres;
+
+CREATE FUNCTION vault.pg_stat_vault_reset()
+RETURNS void
+LANGUAGE c RETURNS NULL ON NULL INPUT AS '$libdir/supabase_vault'
+                                       , 'pg_stat_vault_reset';
+
+ALTER FUNCTION vault.pg_stat_vault_reset () OWNER TO postgres;
+
 CREATE FUNCTION vault.update_secret(secret_id uuid
                                   , new_secret text = CAST(NULL AS text)
                                   , new_name text = CAST(NULL AS text)
