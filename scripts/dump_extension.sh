@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 xpg psql \
   --file=<(cat << 'EOF'
+CREATE EXTENSION supabase_vault;
 DO $$
 DECLARE
   extension_objects text[];

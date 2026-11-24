@@ -45,6 +45,20 @@ jobs:
     - name: Run tests
       run: nix-shell --argstr pgVersion "${{ matrix.pg-version }}" --arg cassert "${{ matrix.cassert }}" --run "xpg -v ${{ matrix.pg-version }} test"
 
+  test-rockylinux:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        container-base-image: ['rockylinux:8', 'rockylinux:9', 'rockylinux:10']
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - name: Run tests
+      run: ./build_docker.sh "${{ matrix.container-base-image }}"
+
   style:
 
     runs-on: ubuntu-latest
